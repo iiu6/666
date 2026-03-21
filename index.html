@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skym深鱼拼图 · v1.9.5</title>
+    <title>Skym深鱼拼图 · v1.9.6 · 增强拖拽</title>
     <!-- 字体库 -->
     <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;900&family=Pacifico&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,14 +36,47 @@
             background: #fef1f4;
             outline: 1px solid var(--accent-border);
             aspect-ratio: 9/16;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         .grid-item img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            pointer-events: none;
         }
-        .grid-item.dragging { opacity:0.4; border:2px dashed var(--accent-color); z-index:50; }
+        .grid-item.dragging { 
+            opacity: 0.4; 
+            transform: scale(0.95);
+            filter: blur(1px);
+            transition: all 0.2s;
+        }
+        .grid-item.drag-over {
+            outline: 3px solid var(--accent-color);
+            outline-offset: -2px;
+            background: color-mix(in srgb, var(--accent-light) 30%, transparent);
+            transform: scale(1.02);
+        }
         .hidden-input { display:none; }
+        
+        /* 拖拽预览浮动层 */
+        .drag-preview {
+            position: fixed;
+            z-index: 9999;
+            width: 100px;
+            height: auto;
+            pointer-events: none;
+            opacity: 0.9;
+            transform: rotate(5deg);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid white;
+        }
+        .drag-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
         
         /* 导出时的样式 */
         .capturing .delete-btn, 
@@ -114,11 +147,7 @@
             gap:8px;
         }
         .bottom-left { display:flex; align-items:center; gap:8px; }
-        .bottom-right { 
-            display:flex; 
-            gap:8px;
-            position: relative;
-        }
+        .bottom-right { display:flex; gap:8px; position: relative; }
         .bottom-toolbar button, .save-mode-btn { 
             padding:4px 10px; 
             font-size:0.7rem; 
@@ -141,7 +170,7 @@
         main { padding: 4px !important; background: var(--secondary-bg); }
         .max-w-\[800px\] { max-width: 100% !important; padding-bottom: 4px !important; }
         
-        /* 保存方式标签 + 向下箭头 */
+        /* 保存方式标签 + 向右箭头 */
         .save-mode-wrapper {
             display: flex;
             flex-direction: column;
@@ -191,7 +220,7 @@
             object-fit: contain !important;
         }
         
-        /* 更新日志模态框 */
+        /* 模态框样式 */
         .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); z-index:300; }
         .modal-content { 
             position:fixed; 
@@ -215,9 +244,7 @@
         .modal-body li { margin-bottom:0.5rem; }
         
         /* 单张下载弹窗样式 */
-        .single-download-modal .modal-body {
-            text-align: center;
-        }
+        .single-download-modal .modal-body { text-align: center; }
         .single-download-modal input {
             border: 2px solid var(--accent-shadow);
             border-radius: 8px;
@@ -227,9 +254,7 @@
             font-size: 1rem;
             text-align: center;
         }
-        .single-download-modal .option-group {
-            margin: 15px 0;
-        }
+        .single-download-modal .option-group { margin: 15px 0; }
         .single-download-modal .option-btn {
             background: var(--accent-light);
             color: white;
@@ -259,12 +284,19 @@
         }
         .theme-color:hover, .theme-color.active { border-color: white; box-shadow: 0 0 0 2px var(--accent-text), 0 5px 15px rgba(0,0,0,0.2); transform: scale(1.05); }
         .theme-label { text-align:center; font-size:0.7rem; color:var(--accent-text); margin-top:5px; font-weight:500; }
+        
+        /* 手机触摸优化 */
+        @media (max-width: 768px) {
+            .grid-item {
+                touch-action: none;
+            }
+        }
     </style>
 </head>
 <body class="h-full w-full flex flex-col" id="mainBody" style="background:var(--primary-bg);">
     <!-- 顶部导航栏 -->
     <header class="pink-panel px-3 py-2 flex justify-between items-center shrink-0 z-20 shadow-sm" style="background:var(--panel-bg);">
-        <h1 class="font-bold" style="color:var(--accent-color); font-size:1.1rem;">Skym深鱼拼图 v1.9.5</h1>
+        <h1 class="font-bold" style="color:var(--accent-color); font-size:1.1rem;">Skym深鱼拼图 v1.9.6</h1>
         <div class="flex gap-1">
             <button onclick="cc()" class="text-xs font-bold px-2 py-1 rounded transition" style="color:var(--accent-color); background:color-mix(in srgb, var(--accent-border) 30%, transparent);">清空</button>
             <button onclick="document.getElementById('mainInput').click()" class="text-white text-xs font-bold px-3 py-1 rounded-lg shadow flex items-center gap-1" style="background:var(--toolbar-btn-bg);"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>加图</button>
@@ -274,10 +306,10 @@
         </div>
     </header>
     
-    <!-- 设置面板 - 修改：删掉"水印"二字和✅，删掉"列数"和"比例"文字 -->
+    <!-- 设置面板 -->
     <div class="pink-panel p-2 shrink-0 z-10 shadow-sm overflow-x-auto" style="background:var(--panel-bg);">
         <div class="flex flex-wrap gap-2 items-center min-w-max">
-            <!-- 水印区域 - 原"+上传"改为"+水印"，删掉"水印"二字和✅状态 -->
+            <!-- 水印区域 -->
             <div class="flex items-center gap-1 pr-2" style="border-right:1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);">
                 <button onclick="document.getElementById('watermarkInput').click()" class="text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1" style="background:color-mix(in srgb, var(--accent-border) 30%, transparent); color:var(--accent-text);">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>水印
@@ -287,31 +319,22 @@
                 <span class="text-xs" style="color:var(--accent-light);">(拖动)</span>
             </div>
             
-            <!-- 列选择 - 删掉"列数"文字 -->
+            <!-- 列选择 -->
             <div class="flex items-center gap-1 pr-2" style="border-right:1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);">
                 <select id="colSelect" onchange="scFromSelect()" class="border rounded py-1 px-1 text-xs" style="border-color:var(--accent-shadow); color:var(--accent-text);">
-                    <option value="1">1列</option>
-                    <option value="2">2列</option>
-                    <option value="3" selected>3列</option>
-                    <option value="4">4列</option>
-                    <option value="5">5列</option>
-                    <option value="6">6列</option>
-                    <option value="7">7列</option>
+                    <option value="1">1列</option><option value="2">2列</option><option value="3" selected>3列</option>
+                    <option value="4">4列</option><option value="5">5列</option><option value="6">6列</option><option value="7">7列</option>
                 </select>
             </div>
             
-            <!-- 画布比例 - 删掉"比例"文字，增加16:9选项 -->
+            <!-- 画布比例 -->
             <div class="flex items-center gap-1 pr-2" style="border-right:1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);">
                 <select id="aspectRatio" onchange="saveAndRender()" class="border rounded py-1 px-1 text-xs" style="border-color:var(--accent-shadow); color:var(--accent-text);">
-                    <option value="1/1">1:1</option>
-                    <option value="3/4">3:4</option>
-                    <option value="9/16" selected>9:16</option>
-                    <option value="4/3">4:3</option>
-                    <option value="16/9">16:9</option>
+                    <option value="1/1">1:1</option><option value="3/4">3:4</option><option value="9/16" selected>9:16</option>
+                    <option value="4/3">4:3</option><option value="16/9">16:9</option>
                 </select>
                 <select id="fitMode" onchange="saveAndRender()" class="border rounded py-1 px-1 text-xs" style="border-color:var(--accent-shadow); color:var(--accent-text);">
-                    <option value="cover">裁剪</option>
-                    <option value="contain">完整</option>
+                    <option value="cover">裁剪</option><option value="contain">完整</option>
                 </select>
             </div>
             
@@ -324,12 +347,9 @@
                 <input type="number" id="startNumber" min="1" max="9999" value="1" onchange="saveAndRender()" class="start-number-input">
                 <span class="text-xs font-bold" style="color:var(--accent-color);">号开始</span>
                 <select id="numFont" onchange="saveAndRender()" class="border rounded py-1 px-1 text-xs w-16 h-6" style="border-color:var(--accent-shadow);">
-                    <option value="sans-serif">默认字</option>
-                    <option value="'Ma Shan Zheng', cursive">毛笔</option>
-                    <option value="'ZCOOL KuaiLe', cursive">方方</option>
-                    <option value="'Lobster', cursive">扭扭</option>
-                    <option value="'Pacifico', cursive">圆圆</option>
-                    <option value="serif">宋体</option>
+                    <option value="sans-serif">默认字</option><option value="'Ma Shan Zheng', cursive">毛笔</option>
+                    <option value="'ZCOOL KuaiLe', cursive">方方</option><option value="'Lobster', cursive">扭扭</option>
+                    <option value="'Pacifico', cursive">圆圆</option><option value="serif">宋体</option>
                 </select>
                 <input type="number" id="numSize" min="10" max="100" value="24" onchange="saveAndRender()" class="w-14 h-6 border rounded text-xs text-center" style="border-color:var(--accent-shadow); color:var(--accent-text);">
                 <input type="color" id="numColor" value="#ffffff" oninput="saveAndRender()" class="w-6 h-6 rounded border-none p-0 cursor-pointer">
@@ -360,42 +380,78 @@
             </div>
         </div>
         
-        <!-- 更新日志模态框 -->
+        <!-- 更新说明模态框 -->
         <div id="logModal" class="modal-overlay" onclick="closeLogModal()">
             <div class="modal-content" onclick="event.stopPropagation()">
-                <div class="modal-header">✨更新日志 v1.9.5</div>
+                <div class="modal-header">✨更新日志 v1.9.6</div>
                 <div class="modal-body">
-                    <p><strong>如何找到作者反馈</strong></p>
-                    <ul>
-                        <li>红薯：Skym深鱼; V:Fe-bAq-u</li>
-                    </ul>
-                        <li>暂时无解问题：序号不能贴近下方底部，需要预留一点空间，否则被遮挡。</li>
-                    </ul>
-                    <p><strong>v1.9.5 界面优化</strong></p>
-                    <ul>
-                        <li>简化面板：删减冗余文字，水印按钮改为"+水印"</li>
-                        <li>比例增加16:9选项</li>
-                        <li>底部"完整"改为"长图"，并添加向右箭头指引</li>
-                    </ul>
-                    <p><strong>v1.9.4 新增</strong></p>
-                    <ul>
-                        <li>序号起始编号自定义：可在序号旁输入起始数字（默认1），图片序号会从该数字开始递增</li>
-                    </ul>
-                    <p><strong>v1.9.3 新增</strong></p>
-                    <ul>
-                        <li>单张下载功能升级：弹窗选择全部打包下载或指定序号下载</li>
-                        <li>指定序号支持多选（如：1,3,5-8,2）</li>
-                    </ul>
-                    <p><strong>v1.9.2 新增</strong></p>
-                    <ul>
-                        <li>界面主题颜色更改功能，日志旁边点击可选喜欢的主题颜色</li>
-                    </ul>
-                    <p><strong>v1.9.1 修复与优化：</strong></p>
-                    <ul>
-                        <li>修复“单张下载”时，序号位置会向下偏移的问题。</li>
-                        <li>将更新日志提示从Toast改为模态对话框，可点击确认关闭。</li>
-                        <li>优化“添加图片成功”提示，移至界面中央，缩短显示时间至1.5秒。</li>
-                    </ul>
+<p><strong>如何找到作者</strong></p>
+<ul>
+    <li>声明：此工具本人制作，本人拥有绝对的话语权。</li>
+    <li>小红书：Skym深鱼; 微信:Fe-bAq-u</li>
+    <li>⚠️此工具只有本人授权使用，通过他人得到链接均属二传或者二卖，被我发现我会取消链接，你们会失去这个好东西哦！且行且珍惜~</li>
+</ul>
+<p><strong>暂时无解问题</strong></p>
+<ul>
+    <li>序号不能贴近下方底部，需要预留一点空间，否则被遮挡。</li>
+</ul>
+
+<p><strong>💜Skym深鱼拼图 v1.9.6 · 使用说明💜</strong></p>
+
+<p><strong>【基础操作】</strong></p>
+<ul>
+    <li><strong>清空</strong>：一键清空全部图片</li>
+    <li><strong>加图</strong>：点击添加图片（支持多选）</li>
+    <li><strong>删除</strong>：每张图片右上角×可单独删除</li>
+    <li><strong>替换</strong>：点击已有图片可替换新图</li>
+</ul>
+
+<p><strong>【下载方式】</strong></p>
+<ul>
+    <li><strong>3x3</strong>：九宫格分割，每9张生成一张图批量导出</li>
+    <li><strong>单张</strong>：弹窗选择——全部打包ZIP / 指定序号下载（支持如“1,3,5-8,2”多选）</li>
+    <li><strong>长图</strong>：全部图片拼成一张长图下载</li>
+    <li><strong>输出质量</strong>：原图PNG / 高清JPG / 压缩JPG（在顶部工具栏选择）</li>
+</ul>
+
+<p><strong>【图片拖拽】</strong></p>
+<ul>
+    <li>拖拽图片可互换位置，拖拽时显示浮动预览图</li>
+    <li>拖到空白区域可取消操作</li>
+</ul>
+
+<p><strong>【水印设置】</strong></p>
+<ul>
+    <li>点击「水印」上传水印图片</li>
+    <li>勾选「启用」显示/隐藏水印</li>
+    <li>数字框调整水印大小</li>
+    <li>按住水印可拖拽移动位置</li>
+</ul>
+
+<p><strong>【序号设置】</strong></p>
+<ul>
+    <li>勾选「序号」显示/隐藏序号</li>
+    <li>「从X开始」自定义起始编号（如1、10、101）</li>
+    <li>下拉框可改序号字体</li>
+    <li>数字框调整序号文字大小</li>
+    <li>色块可改序号颜色</li>
+    <li>按住序号数字可拖拽移动位置</li>
+</ul>
+
+<p><strong>【画布设置】</strong></p>
+<ul>
+    <li>列选择：1列~7列</li>
+    <li>比例：1:1 / 3:4 / 9:16 / 4:3 / 16:9</li>
+    <li>模式：裁剪/完整</li>
+</ul>
+
+<p><strong>【其他功能】</strong></p>
+<ul>
+    <li><strong>图片数量</strong>：左侧显示当前已添加X张图片</li>
+    <li><strong>主题颜色</strong>：点击🎨可切换界面颜色（粉/蓝/绿/紫/橙/灰/深色等）</li>
+    <li><strong>自动保存</strong>：退出后自动恢复图片、水印、序号、主题等所有设置</li>
+    <li><strong>水印/序号位置</strong>：拖拽后可自动记忆位置</li>
+</ul>
                 </div>
                 <div class="modal-footer">
                     <button onclick="closeLogModal()" class="px-6 py-2 text-white font-bold rounded-lg shadow-lg" style="background:var(--toolbar-btn-bg);">知道了</button>
@@ -454,7 +510,7 @@
         <div class="bottom-left">
             <span class="image-count" id="imageCountDisplay">0 张</span>
             <button class="theme-btn" onclick="showThemeModal()" title="切换主题">🎨</button>
-            <button class="log-btn" onclick="showUpdateLog()">日志</button>
+            <button class="log-btn" onclick="showUpdateLog()">说明</button>
         </div>
         <div class="bottom-right">
             <div class="save-mode-wrapper">
@@ -594,6 +650,259 @@
                 if (useZip && zip) { bm(true, '正在生成ZIP文件...'); const content = await zip.generateAsync({ type: "blob" }); let zipUrl = URL.createObjectURL(content); let zipLink = document.createElement('a'); zipLink.href = zipUrl; zipLink.download = `selected_singles_${Date.now()}.zip`; document.body.appendChild(zipLink); zipLink.click(); document.body.removeChild(zipLink); setTimeout(() => URL.revokeObjectURL(zipUrl), 1000); }
                 sh(`✅ 已处理 ${indices.length} 张图片`);
             } catch (err) { console.error(err); sh('❌ 处理失败'); } finally { bm(false); document.getElementById('batchRenderContainer').innerHTML = ''; }
+        }
+
+        // ========== 增强拖拽功能 ==========
+        
+        // 创建浮动预览图
+        function createDragPreview(imgSrc, width, height) {
+            const preview = document.createElement('div');
+            preview.className = 'drag-preview';
+            preview.style.width = Math.min(width * 0.8, 120) + 'px';
+            
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            preview.appendChild(img);
+            
+            document.body.appendChild(preview);
+            return preview;
+        }
+        
+        // 更新预览图位置
+        function updatePreviewPosition(e) {
+            if (!dragPreview) return;
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            dragPreview.style.left = (clientX + 15) + 'px';
+            dragPreview.style.top = (clientY + 15) + 'px';
+        }
+        
+        // 移除预览图和高亮
+        function clearDragState() {
+            if (dragPreview) {
+                dragPreview.remove();
+                dragPreview = null;
+            }
+            document.querySelectorAll('.grid-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+        
+        // 增强的拖拽开始
+        function handleDragStartEnhanced(e, element, index, imgSrc) {
+            e.preventDefault();
+            if (element.classList.contains('number-badge') || element.classList.contains('watermark-badge')) return;
+            
+            dragSrcIndex = index;
+            isDragging = true;
+            
+            // 添加拖拽样式
+            element.classList.add('dragging');
+            
+            // 创建浮动预览图
+            dragPreview = createDragPreview(imgSrc, element.offsetWidth, element.offsetHeight);
+            updatePreviewPosition(e);
+            
+            // 全局事件监听
+            const onMove = (moveEvent) => {
+                if (!isDragging) return;
+                moveEvent.preventDefault();
+                updatePreviewPosition(moveEvent);
+                
+                // 检测鼠标下方的目标格子
+                let targetElem = null;
+                if (moveEvent.touches) {
+                    targetElem = document.elementFromPoint(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+                } else {
+                    targetElem = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+                }
+                
+                const targetGridItem = targetElem?.closest('.grid-item');
+                
+                // 清除所有高亮
+                document.querySelectorAll('.grid-item').forEach(item => {
+                    if (item !== element) item.classList.remove('drag-over');
+                });
+                
+                // 高亮目标格子
+                if (targetGridItem && targetGridItem !== element) {
+                    targetGridItem.classList.add('drag-over');
+                }
+            };
+            
+            const onEnd = (endEvent) => {
+                // 获取最终目标
+                let targetElem = null;
+                if (endEvent.changedTouches) {
+                    targetElem = document.elementFromPoint(endEvent.changedTouches[0].clientX, endEvent.changedTouches[0].clientY);
+                } else {
+                    targetElem = document.elementFromPoint(endEvent.clientX, endEvent.clientY);
+                }
+                
+                const targetGridItem = targetElem?.closest('.grid-item');
+                let targetIndex = null;
+                if (targetGridItem && targetGridItem !== element) {
+                    targetIndex = parseInt(targetGridItem.dataset.index);
+                }
+                
+                // 执行交换
+                if (dragSrcIndex !== null && targetIndex !== null && dragSrcIndex !== targetIndex) {
+                    while (b.length <= Math.max(dragSrcIndex, targetIndex)) b.push(null);
+                    [b[dragSrcIndex], b[targetIndex]] = [b[targetIndex], b[dragSrcIndex]];
+                    saveAndRender();
+                    updateCountAndSave();
+                    sh('✨ 图片位置已交换');
+                }
+                
+                // 清理
+                element.classList.remove('dragging');
+                clearDragState();
+                isDragging = false;
+                dragSrcIndex = null;
+                
+                // 移除事件监听
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onEnd);
+                document.removeEventListener('touchmove', onMove, { passive: false });
+                document.removeEventListener('touchend', onEnd);
+            };
+            
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onEnd);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onEnd);
+        }
+        
+        // 修改核心渲染函数，为每个图片格子绑定增强拖拽
+        function K(L, M, N, O, P) {
+            let Q = document.getElementById('fitMode').value, R = document.getElementById('aspectRatio').value, 
+                S = document.getElementById('showNumbers').checked, T = document.getElementById('numColor').value,
+                U = document.getElementById('numFont').value, V = parseInt(document.getElementById('numSize').value) || 24,
+                W = h && g, WW = parseInt(document.getElementById('watermarkSize').value) / 100 || 0.3,
+                Y = M.length, Z = Math.ceil(Y / N) || 1;
+            
+            L.style.display = 'grid';
+            L.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+            L.innerHTML = '';
+            let _ = Z * N;
+            
+            for (let $ = 0; $ < _; $++) {
+                let ab = document.createElement('div');
+                ab.className = 'grid-item flex items-center justify-center cursor-pointer relative';
+                let ac = L.id === 'gridContainer';
+                
+                if (ac) {
+                    ab.dataset.index = $;
+                    
+                    if ($ < M.length && M[$]) {
+                        // 有图片时绑定拖拽事件
+                        ab.style.cursor = 'grab';
+                        ab.addEventListener('mousedown', (e) => {
+                            if (e.target.classList.contains('delete-btn') || e.target.classList.contains('number-badge') || e.target.classList.contains('watermark-badge')) return;
+                            e.preventDefault();
+                            handleDragStartEnhanced(e, ab, $, M[$]);
+                        });
+                        ab.addEventListener('touchstart', (e) => {
+                            if (e.target.classList.contains('delete-btn') || e.target.classList.contains('number-badge') || e.target.classList.contains('watermark-badge')) return;
+                            e.preventDefault();
+                            handleDragStartEnhanced(e, ab, $, M[$]);
+                        }, { passive: false });
+                    }
+                    
+                    ab.onclick = (ah) => {
+                        if (ah.target.closest('.delete-btn')) return;
+                        if ($ < M.length && M[$]) B($);
+                        else document.getElementById('mainInput').click();
+                    };
+                } else ab.classList.add('capturing');
+                
+                ab.style.aspectRatio = R;
+                
+                if ($ < M.length && M[$]) {
+                    let ai = document.createElement('div');
+                    ai.className = 'relative w-full h-full';
+                    let aj = document.createElement('img');
+                    aj.src = M[$];
+                    aj.className = `w-full h-full pointer-events-none ${Q === 'contain' ? 'object-contain' : 'object-cover'}`;
+                    ai.appendChild(aj);
+                    
+                    if (W) {
+                        let ak = document.createElement('img');
+                        ak.src = g;
+                        ak.className = 'watermark-badge absolute pointer-events-none';
+                        ak.style.left = wmX + '%';
+                        ak.style.top = wmY + '%';
+                        ak.style.transform = 'translate(-50%, -50%)';
+                        ak.style.width = `${WW * 100}%`;
+                        ak.style.height = 'auto';
+                        ak.style.maxWidth = '100%';
+                        ak.style.maxHeight = '100%';
+                        ak.style.objectFit = 'contain';
+                        ak.style.opacity = '0.7';
+                        ak.style.zIndex = '25';
+                        ak.style.cursor = 'move';
+                        if (ac) {
+                            ak.style.pointerEvents = 'auto';
+                            ak.onmousedown = (e) => startWmDrag(e, ak);
+                            ak.ontouchstart = (e) => startWmDrag(e, ak);
+                        } else ak.style.pointerEvents = 'none';
+                        ai.appendChild(ak);
+                    }
+                    ab.appendChild(ai);
+                    
+                    if (S) {
+                        let al = document.createElement('div');
+                        al.className = 'number-badge absolute font-bold z-30 leading-none drop-shadow-md cursor-move select-none';
+                        al.style.left = d + '%';
+                        al.style.top = e + '%';
+                        al.style.transform = 'translate(-50%, -50%)';
+                        let displayNumber = startNumber + $;
+                        al.innerText = displayNumber;
+                        al.style.color = T;
+                        al.style.fontFamily = U;
+                        al.style.fontSize = V * P + 'px';
+                        al.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+                        if (ac) {
+                            al.style.pointerEvents = 'auto';
+                            al.onmousedown = (am) => an(am, al);
+                            al.ontouchstart = (am) => an(am, al);
+                        } else al.style.pointerEvents = 'none';
+                        ab.appendChild(al);
+                    }
+                    
+                    if (ac) {
+                        let ao = document.createElement('div');
+                        ao.className = 'overlay-hint absolute inset-0 flex items-center justify-center pointer-events-none';
+                        ao.innerHTML = '<span class="bg-black/40 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">点击替换</span>';
+                        ab.appendChild(ao);
+                        
+                        let ap = document.createElement('button');
+                        ap.innerHTML = '×';
+                        ap.className = 'delete-btn absolute top-0 right-0 w-6 h-6 flex items-center justify-center z-20 font-bold';
+                        ap.style.backgroundColor = 'var(--accent-light)';
+                        ap.style.color = 'white';
+                        ap.onclick = (aq) => {
+                            aq.stopPropagation();
+                            b.splice($, 1);
+                            saveAndRender();
+                            updateCountAndSave();
+                        };
+                        ab.appendChild(ap);
+                    }
+                } else {
+                    if (ac) {
+                        ab.classList.add('empty');
+                        ab.innerHTML = '<span class="empty-placeholder text-3xl select-none pointer-events-none">+</span>';
+                    } else ab.style.backgroundColor = '#fff2f5';
+                }
+                L.appendChild(ab);
+            }
         }
 
         // 保存所有状态
