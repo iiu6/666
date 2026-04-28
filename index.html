@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skym深鱼拼图 · v1.9.5</title>
+    <title>Skym深鱼拼图 · v1.9.6</title>
     <!-- 字体库 -->
     <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;900&family=Pacifico&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,6 +35,753 @@
             touch-action: pan-y; 
             background: #fef1f4;
             outline: 1px solid var(--accent-border);
+            aspect-ratio: 9/16;
+        }
+        .grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .grid-item.dragging { opacity:0.4; border:2px dashed var(--accent-color); z-index:50; }
+        .hidden-input { display:none; }
+        
+        /* 导出时的样式 */
+        .capturing .delete-btn, 
+        .capturing .overlay-hint, 
+        .capturing .empty-placeholder { display:none!important; }
+        .capturing .number-badge, 
+        .capturing .watermark-badge { display:block!important; }
+        .capturing .grid-item { outline:none; } 
+        
+        .overlay-hint { background:rgba(250,120,140,0.25); opacity:0; transition:opacity .2s; }
+        .grid-item:hover .overlay-hint { opacity:1; }
+        
+        /* 预览模态框 */
+        #previewModal { z-index:100; }
+        #previewImage { max-height:70vh; object-fit:contain; }
+        
+        /* 拖拽高亮 */
+        body.drag-over { background:rgba(249,168,184,0.25); }
+        .dropzone-highlight { outline:4px dashed var(--accent-color)!important; outline-offset:-4px; background:#fff0f7; }
+        
+        /* 提示 */
+        .save-hint { position:fixed; bottom:20px; left:20px; right:20px; background:var(--accent-color); color:#fff; text-align:center; padding:12px; border-radius:999px; font-size:14px; font-weight:500; z-index:200; animation:slideUp .3s ease, slideDown 2.5s ease 0.3s forwards; backdrop-filter:blur(8px); box-shadow:0 4px 12px var(--accent-shadow); }
+        @keyframes slideUp { from{transform:translateY(100px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+        @keyframes slideDown { to{transform:translateY(100px); opacity:0;} }
+        
+        /* 中央提示 */
+        .center-hint { 
+            position:fixed; 
+            top:50%; 
+            left:50%; 
+            transform:translate(-50%, -50%); 
+            background:linear-gradient(135deg, var(--accent-color), var(--accent-light)); 
+            color:#fff; 
+            text-align:center; 
+            padding:20px 30px; 
+            border-radius:20px; 
+            font-size:1.1rem; 
+            font-weight:bold; 
+            z-index:200; 
+            animation:popIn .3s ease, fadeOut 1.2s ease 0.3s forwards; 
+            backdrop-filter:blur(12px); 
+            box-shadow:0 8px 32px rgba(244,114,144,0.3);
+            min-width: 200px;
+        }
+        @keyframes popIn { from{transform:translate(-50%, -50%) scale(0.5); opacity:0;} to{transform:translate(-50%, -50%) scale(1); opacity:1;} }
+        @keyframes fadeOut { to{opacity:0;} }
+        
+        /* 空白格子 */
+        .grid-item.empty { background:#fff2f5; }
+        .empty-placeholder { color:#fbb6c2; font-size:2rem; font-weight:300; }
+        
+        /* 面板样式 */
+        .pink-panel { background:var(--panel-bg); backdrop-filter:blur(4px); border-bottom:1px solid var(--accent-border); }
+        
+        /* 底部工具栏 */
+        .bottom-toolbar { 
+            position:sticky; 
+            bottom:0; 
+            width:100%; 
+            background:color-mix(in srgb, var(--panel-bg) 90%, transparent); 
+            backdrop-filter:blur(8px); 
+            border-top:1px solid var(--accent-border); 
+            padding:6px 12px; 
+            z-index:30; 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center;
+            gap:8px;
+        }
+        .bottom-left { display:flex; align-items:center; gap:8px; }
+        .bottom-right { 
+            display:flex; 
+            gap:8px;
+            position: relative;
+        }
+        .bottom-toolbar button, .save-mode-btn { 
+            padding:4px 10px; 
+            font-size:0.7rem; 
+            white-space:nowrap;
+            background:var(--toolbar-btn-bg);
+            color:white;
+            border-radius:999px;
+            font-weight:bold;
+            border:none;
+            cursor:pointer;
+        }
+        .save-mode-btn.active {
+            background:var(--accent-color);
+            box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--accent-light);
+        }
+        .image-count { background:color-mix(in srgb, var(--accent-border) 30%, transparent); color:var(--accent-color); padding:2px 10px; border-radius:30px; font-size:0.75rem; font-weight:600; }
+        .log-btn, .theme-btn { background:var(--accent-color); color:white; padding:2px 8px; border-radius:30px; font-size:0.7rem; font-weight:600; cursor:pointer; border:none; }
+        
+        /* 主内容区 */
+        main { padding: 4px !important; background: var(--secondary-bg); }
+        .max-w-\[800px\] { max-width: 100% !important; padding-bottom: 4px !important; }
+        
+        /* 保存方式标签 + 向下箭头 */
+        .save-mode-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 8px;
+        }
+        .save-mode-label {
+            font-size:0.7rem;
+            color:var(--accent-color);
+            font-weight:bold;
+            margin-bottom: 2px;
+        }
+        .arrow-down {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            animation: bounceRight 1s ease infinite;
+        }
+        @keyframes bounceRight {
+            0%, 100% { transform: translateX(0); }
+           50% { transform: translateX(4px); }
+        }
+        
+        /* 下拉框统一样式 */
+        select {
+            border-color: var(--accent-shadow);
+            color: var(--accent-text);
+            background-color: white;
+            border-radius: 0.25rem;
+            padding: 0.125rem 0.25rem;
+            font-size: 0.7rem;
+        }
+        
+        /* 起始序号输入框 */
+        .start-number-input {
+            width: 55px;
+            border: 1px solid var(--accent-shadow);
+            border-radius: 0.25rem;
+            padding: 0.125rem 0.25rem;
+            font-size: 0.7rem;
+            text-align: center;
+            background: white;
+            color: var(--accent-text);
+        }
+        
+        /* 水印样式修复 */
+        .watermark-badge {
+            object-fit: contain !important;
+        }
+        
+        /* 更新日志模态框 */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); z-index:300; }
+        .modal-content { 
+            position:fixed; 
+            top:50%; 
+            left:50%; 
+            transform:translate(-50%, -50%); 
+            background:#fff5f7; 
+            border-radius:20px; 
+            overflow:hidden; 
+            max-width:90%; 
+            width:500px; 
+            max-height:80vh; 
+            z-index:301; 
+            border:2px solid var(--accent-shadow);
+            box-shadow:0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header { padding:20px; border-bottom:2px solid var(--accent-border); background:var(--accent-color); color:white; font-size:1.3rem; font-weight:bold; text-align:center; }
+        .modal-body { padding:20px; max-height:50vh; overflow-y:auto; font-size:0.9rem; line-height:1.5; color:#5a3b42; }
+        .modal-footer { padding:15px; border-top:2px solid var(--accent-border); text-align:center; }
+        .modal-body ul { padding-left:1.5rem; }
+        .modal-body li { margin-bottom:0.5rem; }
+        
+        /* 单张下载弹窗样式 */
+        .single-download-modal .modal-body {
+            text-align: center;
+        }
+        .single-download-modal input {
+            border: 2px solid var(--accent-shadow);
+            border-radius: 8px;
+            padding: 8px 12px;
+            width: 80%;
+            margin: 10px 0;
+            font-size: 1rem;
+            text-align: center;
+        }
+        .single-download-modal .option-group {
+            margin: 15px 0;
+        }
+        .single-download-modal .option-btn {
+            background: var(--accent-light);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .single-download-modal .option-btn.active {
+            background: var(--accent-color);
+            box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent-light);
+        }
+        
+        /* 主题色选择模态框 */
+        .theme-modal { display:none; }
+        .theme-palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 20px; }
+        .theme-color { 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .theme-color:hover, .theme-color.active { border-color: white; box-shadow: 0 0 0 2px var(--accent-text), 0 5px 15px rgba(0,0,0,0.2); transform: scale(1.05); }
+        .theme-label { text-align:center; font-size:0.7rem; color:var(--accent-text); margin-top:5px; font-weight:500; }
+    </style>
+</head>
+<body class="h-full w-full flex flex-col" id="mainBody" style="background:var(--primary-bg);">
+    <!-- 顶部导航栏 -->
+    <header class="pink-panel px-3 py-2 flex justify-between items-center shrink-0 z-20 shadow-sm" style="background:var(--panel-bg);">
+        <h1 class="font-bold" style="color:var(--accent-color); font-size:1.1rem;">Skym深鱼拼图 v1.9.5</h1>
+        <div class="flex gap-1">
+            <button onclick="cc()" class="text-xs font-bold px-2 py-1 rounded transition" style="color:var(--accent-color); background:color-mix(in srgb, var(--accent-border) 30%, transparent);">清空</button>
+            <button onclick="document.getElementById('mainInput').click()" class="text-white text-xs font-bold px-3 py-1 rounded-lg shadow flex items-center gap-1" style="background:var(--toolbar-btn-bg);"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>加图</button>
+            <select id="exportQuality" class="border text-xs font-bold py-1 px-1 rounded-lg shadow focus:outline-none" style="border-color:var(--accent-shadow); color:var(--accent-text);">
+                <option value="png">原图</option><option value="jpg_high">高清</option><option value="jpg_mid">压缩</option>
+            </select>
+        </div>
+    </header>
+    
+    <!-- 设置面板 - 修改：删掉"水印"二字和✅，删掉"列数"和"比例"文字 -->
+    <div class="pink-panel p-2 shrink-0 z-10 shadow-sm overflow-x-auto" style="background:var(--panel-bg);">
+        <div class="flex flex-wrap gap-2 items-center min-w-max">
+            <!-- 水印区域 - 原"+上传"改为"+水印"，删掉"水印"二字和✅状态 -->
+            <div class="flex items-center gap-1 pr-2" style="border-right:1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);">
+                <button onclick="document.getElementById('watermarkInput').click()" class="text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1" style="background:color-mix(in srgb, var(--accent-border) 30%, transparent); color:var(--accent-text);">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>水印
+                </button>
+                <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="watermarkEnable" onchange="saveAndRender()" class="rounded" style="accent-color:var(--accent-color);"><span style="color:var(--accent-text);">启用</span></label>
+                <input type="number" id="watermarkSize" min="10" max="80" value="30" onchange="saveAndRender()" class="w-14 h-6 border rounded text-xs text-center" style="border-color:var(--accent-shadow); color:var(--accent-text);">
+                <span class="text-xs" style="color:var(--accent-light);">(拖动)</span>
+            </div>
+            
+            <!-- 行选择 -->
+            <div class="flex items-center gap-1 pr-2" style="border-right:1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);">
+                <select id="colSelect" onchange="scFromSelect()" class="border rounded py-1 px-1 text-xs" style="border-color:var(--accent-shadow); color:var(--accent-text);">
+                    <option value="1">1行</option>
+                    <option value="2">2行</option>
+                    <option value="3" selected>3行</option>
+                    <option value="4">4行</option>
+                    <option value="5">5行</option>
+                    <option value="6">6行</option>
+                    <option value="7">7行</option>
+                    <option value="8">8行</option>
+                </select>
+            </div>
+            
+            <!-- 画布比例 - 删掉"比例"文字，增加16:9选项 -->
+            <div class="flex items-center gap-1 pr-2" style="border-right:1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);">
+                <select id="aspectRatio" onchange="saveAndRender()" class="border rounded py-1 px-1 text-xs" style="border-color:var(--accent-shadow); color:var(--accent-text);">
+                    <option value="1/1">1:1</option>
+                    <option value="3/4">3:4</option>
+                    <option value="9/16" selected>9:16</option>
+                    <option value="4/3">4:3</option>
+                    <option value="16/9">16:9</option>
+                </select>
+                <select id="fitMode" onchange="saveAndRender()" class="border rounded py-1 px-1 text-xs" style="border-color:var(--accent-shadow); color:var(--accent-text);">
+                    <option value="cover">裁剪</option>
+                    <option value="contain">完整</option>
+                </select>
+            </div>
+            
+            <!-- 序号区域 -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <label class="flex items-center gap-1 text-xs font-bold cursor-pointer" style="color:var(--accent-color);">
+                    <input type="checkbox" id="showNumbers" onchange="saveAndRender()" checked class="rounded" style="accent-color:var(--accent-color);">序号
+                </label>
+                <span class="text-xs font-bold" style="color:var(--accent-color);">从</span>
+                <input type="number" id="startNumber" min="1" max="9999" value="1" onchange="saveAndRender()" class="start-number-input">
+                <span class="text-xs font-bold" style="color:var(--accent-color);">号开始</span>
+                <select id="numFont" onchange="saveAndRender()" class="border rounded py-1 px-1 text-xs w-16 h-6" style="border-color:var(--accent-shadow);">
+                    <option value="sans-serif">默认字</option>
+                    <option value="'Ma Shan Zheng', cursive">毛笔</option>
+                    <option value="'ZCOOL KuaiLe', cursive">方方</option>
+                    <option value="'Lobster', cursive">扭扭</option>
+                    <option value="'Pacifico', cursive">圆圆</option>
+                    <option value="serif">宋体</option>
+                </select>
+                <input type="number" id="numSize" min="10" max="100" value="24" onchange="saveAndRender()" class="w-14 h-6 border rounded text-xs text-center" style="border-color:var(--accent-shadow); color:var(--accent-text);">
+                <input type="color" id="numColor" value="#ffffff" oninput="saveAndRender()" class="w-6 h-6 rounded border-none p-0 cursor-pointer">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 主体内容区 -->
+    <main class="flex-1 overflow-y-scroll min-h-0 flex justify-center relative w-full" id="mainContent" style="background:var(--secondary-bg); padding:4px;">
+        <div class="w-full pb-16"> 
+            <div class="shadow-lg bg-white rounded-sm overflow-hidden" id="canvasWrapper" style="width:100%;">
+                <div id="captureArea" class="bg-white w-full"><div id="gridContainer" class="grid bg-white"></div></div>
+            </div>
+        </div>
+
+        <!-- 预览模态框 -->
+        <div id="previewModal" class="hidden fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 z-[100]">
+            <div class="rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]" style="background:#fff5f7;">
+                <div class="p-4 border-b flex justify-between items-center" style="border-color:var(--accent-border);"><h3 class="text-lg font-bold" style="color:var(--accent-color);">👀 预览</h3><button onclick="cp()" class="text-2xl leading-none" style="color:var(--accent-light);">&times;</button></div>                
+                <div class="flex-1 overflow-auto p-4 flex justify-center items-center" style="background:#ffeef0;"><img id="previewImage" src="" alt="Preview" class="border shadow-sm" style="border-color:var(--accent-shadow);"></div>                
+                <div class="p-4 border-t flex gap-3" style="border-color:var(--accent-border);">
+                    <button onclick="cp()" class="flex-1 py-2.5 font-bold rounded-lg transition" style="background:color-mix(in srgb, var(--accent-border) 30%, transparent); color:var(--accent-text);">返回</button>
+                    <button id="mobileSaveBtn" onclick="handleMobileSave()" class="flex-1 py-2.5 text-white font-bold rounded-lg shadow-lg flex justify-center items-center gap-2" style="background:var(--toolbar-btn-bg);">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span id="saveBtnText">保存图片</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 更新日志模态框 -->
+        <div id="logModal" class="modal-overlay" onclick="closeLogModal()">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">✨更新日志 v1.9.5</div>
+                <div class="modal-body">
+                    <p><strong>如何找到作者反馈</strong></p>
+                    <ul>
+                        <li>声明：此工具本人制作，本人拥有绝对的话语权。</li>
+                        <li>红薯：Skym深鱼; V:Fe-bAq-u</li>
+                        <li>⚠️此工具只有本人授权使用，通过他人得到链接均属二传或者二卖，被我发现我会取消链接，你们会失去这个好东西哦！且行且珍惜~</li>
+                    </ul>
+                    <p><strong>暂时无解问题</strong></p>
+                    <ul>
+                        <li>序号不能贴近下方底部，需要预留一点空间，否则被遮挡。</li>
+                    </ul>
+
+                    <p><strong>💜Skym深鱼拼图 v1.9.6 · 使用说明💜</strong></p>
+
+                    <p><strong>【基础操作】</strong></p>
+                    <ul>
+                        <li><strong>清空</strong>：一键清空全部图片</li>
+                        <li><strong>加图</strong>：点击添加图片（支持多选）</li>
+                        <li><strong>删除</strong>：每张图片右上角×可单独删除</li>
+                        <li><strong>替换</strong>：点击已有图片可替换新图</li>
+                    </ul>
+
+                    <p><strong>【下载方式】</strong></p>
+                    <ul>
+                        <li><strong>3x3</strong>：九宫格分割，每9张生成一张图批量导出</li>
+                        <li><strong>单张</strong>：弹窗选择——全部打包ZIP / 指定序号下载（支持如“1,3,5-8,2”多选）</li>
+                        <li><strong>长图</strong>：全部图片拼成一张长图下载</li>
+                        <li><strong>输出质量</strong>：原图PNG / 高清JPG / 压缩JPG（在顶部工具栏选择）</li>
+                    </ul>
+
+                    <p><strong>【图片拖拽】（bug，暂时取消）</strong></p>
+                    <ul>
+                        <li>拖拽图片可互换位置，拖拽时显示浮动预览图</li>
+                        <li>拖到空白区域可取消操作</li>
+                    </ul>
+
+                    <p><strong>【水印设置】</strong></p>
+                    <ul>
+                        <li>点击「水印」上传水印图片</li>
+                        <li>勾选「启用」显示/隐藏水印</li>
+                        <li>数字框调整水印大小</li>
+                        <li>按住水印可拖拽移动位置</li>
+                    </ul>
+
+                    <p><strong>【序号设置】</strong></p>
+                    <ul>
+                        <li>勾选「序号」显示/隐藏序号</li>
+                        <li>「从X开始」自定义起始编号（如1、10、101）</li>
+                        <li>下拉框可改序号字体</li>
+                        <li>数字框调整序号文字大小</li>
+                        <li>色块可改序号颜色</li>
+                        <li>按住序号数字可拖拽移动位置</li>
+                    </ul>
+
+                    <p><strong>【画布设置】</strong></p>
+                    <ul>
+                        <li>行选择：1行~7行</li>
+                        <li>比例：1:1 / 3:4 / 9:16 / 4:3 / 16:9</li>
+                        <li>模式：裁剪/完整</li>
+                    </ul>
+
+                    <p><strong>【其他功能】</strong></p>
+                    <ul>
+                        <li><strong>图片数量</strong>：左侧显示当前已添加X张图片</li>
+                        <li><strong>主题颜色</strong>：点击🎨可切换界面颜色（粉/蓝/绿/紫/橙/灰/深色等）</li>
+                        <li><strong>自动保存</strong>：退出后自动恢复图片、水印、序号、主题等所有设置</li>
+                        <li><strong>水印/序号位置</strong>：拖拽后可自动记忆位置</li>
+                        <li><strong>图片数量</strong>：建议50张，避免遗漏图片</li>
+                    </ul>
+
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeLogModal()" class="px-6 py-2 text-white font-bold rounded-lg shadow-lg" style="background:var(--toolbar-btn-bg);">知道了</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 单张下载选择模态框 -->
+        <div id="singleDownloadModal" class="modal-overlay single-download-modal" onclick="closeSingleDownloadModal()">
+            <div class="modal-content" style="width: 400px;" onclick="event.stopPropagation()">
+                <div class="modal-header">📥 选择下载方式</div>
+                <div class="modal-body">
+                    <div class="option-group">
+                        <button id="optionAll" class="option-btn active" onclick="setDownloadOption('all')">全部打包下载</button>
+                        <button id="optionSpecify" class="option-btn" onclick="setDownloadOption('specify')">指定序号下载</button>
+                    </div>
+                    <div id="specifyInputArea" style="display: none; margin-top: 15px;">
+                        <p style="font-size: 0.85rem; color: var(--accent-text); margin-bottom: 8px;">输入序号（支持逗号分隔和范围，如：1,3,5-8）</p>
+                        <input type="text" id="specifyNumbers" placeholder="例：1,3,5-8,10" style="width: 90%; padding: 10px; border-radius: 10px; border: 2px solid var(--accent-shadow);">
+                    </div>
+                    <p style="font-size: 0.8rem; color: #999; margin-top: 15px;">当前共有 <span id="totalImageCount" style="color: var(--accent-color); font-weight: bold;">0</span> 张图片</p>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="closeSingleDownloadModal()" class="px-4 py-2 rounded-lg" style="background: #e5e7eb; color: #666;">取消</button>
+                    <button onclick="confirmSingleDownload()" class="px-4 py-2 text-white font-bold rounded-lg" style="background: var(--accent-color);">开始下载</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主题色选择模态框 -->
+        <div id="themeModal" class="modal-overlay theme-modal" onclick="closeThemeModal()">
+            <div class="modal-content" onclick="event.stopPropagation()" style="width: 350px;">
+                <div class="modal-header">🎨 选择主题颜色</div>
+                <div class="theme-palette">
+                    <div><div class="theme-color active" data-theme="pink" style="background: linear-gradient(135deg, #fff0f3, #f9a8b8);" onclick="applyTheme('pink')"></div><div class="theme-label">粉红甜心</div></div>
+                    <div><div class="theme-color" data-theme="blue" style="background: linear-gradient(135deg, #f0f8ff, #a8d8f9);" onclick="applyTheme('blue')"></div><div class="theme-label">蔚蓝天空</div></div>
+                    <div><div class="theme-color" data-theme="green" style="background: linear-gradient(135deg, #f0fff4, #a8f9c3);" onclick="applyTheme('green')"></div><div class="theme-label">清新薄荷</div></div>
+                    <div><div class="theme-color" data-theme="purple" style="background: linear-gradient(135deg, #f8f0ff, #d8a8f9);" onclick="applyTheme('purple')"></div><div class="theme-label">梦幻紫罗兰</div></div>
+                    <div><div class="theme-color" data-theme="orange" style="background: linear-gradient(135deg, #fff8f0, #f9d1a8);" onclick="applyTheme('orange')"></div><div class="theme-label">活力橙</div></div>
+                    <div><div class="theme-color" data-theme="gray" style="background: linear-gradient(135deg, #f8f9fa, #d1d5db);" onclick="applyTheme('gray')"></div><div class="theme-label">简约灰</div></div>
+                    <div><div class="theme-color" data-theme="dark" style="background: linear-gradient(135deg, #2d3748, #4a5568);" onclick="applyTheme('dark')"></div><div class="theme-label">深色模式</div></div>
+                    <div><div class="theme-color" data-theme="classic" style="background: linear-gradient(135deg, #ffffff, #e5e7eb); border: 1px solid #d1d5db;" onclick="applyTheme('classic')"></div><div class="theme-label">经典白</div></div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeThemeModal()" class="px-6 py-2 text-white font-bold rounded-lg" style="background:var(--accent-color);">关闭</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 加载提示 -->
+        <div id="loadingToast" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white px-6 py-4 rounded-lg z-50 flex flex-col items-center" style="background:var(--accent-light);"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div><span id="loadingText" class="text-sm font-bold">处理中...</span></div>
+    </main>
+
+    <!-- 底部工具栏 - 修改：保存方式加向右箭头指引 -->
+    <div class="bottom-toolbar">
+        <div class="bottom-left">
+            <span class="image-count" id="imageCountDisplay">0 张</span>
+            <button class="theme-btn" onclick="showThemeModal()" title="切换主题">🎨</button>
+            <button class="log-btn" onclick="showUpdateLog()">说明</button>
+        </div>
+        <div class="bottom-right">
+            <div class="save-mode-wrapper">
+                <span class="save-mode-label">保存方式</span>
+                <span class="arrow-down">→</span>
+            </div>
+            <button onclick="start3x3Split()" class="save-mode-btn">3x3</button>
+            <button onclick="showSingleDownloadModal()" class="save-mode-btn">单张</button>
+            <button onclick="downloadFullImageDirect()" class="save-mode-btn">长图</button>
+        </div>
+    </div>
+    
+    <!-- 隐藏元素 -->
+    <div id="batchRenderContainer" style="position:fixed; left:-9999px; top:0; background:white;"></div>
+    <input type="file" id="mainInput" class="hidden-input" multiple accept="image/*" onchange="hf(this.files)">
+    <input type="file" id="replaceInput" class="hidden-input" accept="image/*" onchange="hrf(this.files)">
+    <input type="file" id="watermarkInput" class="hidden-input" accept="image/*" onchange="hwf(this.files)">
+
+    <script>
+        // 全局变量
+        let a=3, b=[], c=-1, d=50, e=80, f=null, g=null, h=false;
+        let wmX = 90, wmY = 90;
+        let startNumber = 1; // 起始序号，默认1
+        const STORAGE_KEY = 'skym_puzzle_data';
+        const THEME_STORAGE_KEY = 'skym_theme';
+        let isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        let currentDownloadOption = 'all';
+
+        // 主题配置
+        const themes = {
+            pink: { primaryBg: '#fff0f3', secondaryBg: '#ffeaee', panelBg: '#ffffffde', accent: '#f47290', accentLight: '#f9a8b8', accentBorder: '#ffd9e2', accentShadow: '#fbc1cc', accentText: '#b95c74', toolbarBtn: '#f9a8b8' },
+            blue: { primaryBg: '#f0f8ff', secondaryBg: '#e6f2ff', panelBg: '#ffffffde', accent: '#3b82f6', accentLight: '#60a5fa', accentBorder: '#bfdbfe', accentShadow: '#93c5fd', accentText: '#1e40af', toolbarBtn: '#60a5fa' },
+            green: { primaryBg: '#f0fff4', secondaryBg: '#dcfce7', panelBg: '#ffffffde', accent: '#10b981', accentLight: '#34d399', accentBorder: '#a7f3d0', accentShadow: '#6ee7b7', accentText: '#047857', toolbarBtn: '#34d399' },
+            purple: { primaryBg: '#f8f0ff', secondaryBg: '#f3e8ff', panelBg: '#ffffffde', accent: '#8b5cf6', accentLight: '#a78bfa', accentBorder: '#ddd6fe', accentShadow: '#c4b5fd', accentText: '#6d28d9', toolbarBtn: '#a78bfa' },
+            orange: { primaryBg: '#fff8f0', secondaryBg: '#feedd5', panelBg: '#ffffffde', accent: '#f59e0b', accentLight: '#fbbf24', accentBorder: '#fcd34d', accentShadow: '#fde68a', accentText: '#b45309', toolbarBtn: '#fbbf24' },
+            gray: { primaryBg: '#f8f9fa', secondaryBg: '#e9ecef', panelBg: '#ffffffde', accent: '#6b7280', accentLight: '#9ca3af', accentBorder: '#d1d5db', accentShadow: '#e5e7eb', accentText: '#374151', toolbarBtn: '#9ca3af' },
+            dark: { primaryBg: '#1f2937', secondaryBg: '#374151', panelBg: '#4b5563cc', accent: '#60a5fa', accentLight: '#93c5fd', accentBorder: '#4b5563', accentShadow: '#6b7280', accentText: '#d1d5db', toolbarBtn: '#3b82f6' },
+            classic: { primaryBg: '#ffffff', secondaryBg: '#f9fafb', panelBg: '#ffffffe6', accent: '#6b7280', accentLight: '#9ca3af', accentBorder: '#e5e7eb', accentShadow: '#d1d5db', accentText: '#374151', toolbarBtn: '#6b7280' }
+        };
+
+        function applyTheme(themeName) {
+            const theme = themes[themeName];
+            if (!theme) return;
+            const root = document.documentElement;
+            root.style.setProperty('--primary-bg', theme.primaryBg);
+            root.style.setProperty('--secondary-bg', theme.secondaryBg);
+            root.style.setProperty('--panel-bg', theme.panelBg);
+            root.style.setProperty('--accent-color', theme.accent);
+            root.style.setProperty('--accent-light', theme.accentLight);
+            root.style.setProperty('--accent-border', theme.accentBorder);
+            root.style.setProperty('--accent-shadow', theme.accentShadow);
+            root.style.setProperty('--accent-text', theme.accentText);
+            root.style.setProperty('--toolbar-btn-bg', theme.toolbarBtn);
+            document.querySelectorAll('.theme-color').forEach(el => { el.classList.remove('active'); if (el.dataset.theme === themeName) el.classList.add('active'); });
+            localStorage.setItem(THEME_STORAGE_KEY, themeName);
+            closeThemeModal();
+        }
+
+        function loadSavedTheme() { const savedTheme = localStorage.getItem(THEME_STORAGE_KEY); if (savedTheme && themes[savedTheme]) applyTheme(savedTheme); else applyTheme('pink'); }
+        function showThemeModal() { document.getElementById('themeModal').style.display = 'block'; }
+        function closeThemeModal() { document.getElementById('themeModal').style.display = 'none'; }
+
+        // 单张下载弹窗控制
+        function showSingleDownloadModal() { if (b.length === 0) { sh('❌ 没有图片'); return; } document.getElementById('totalImageCount').innerText = b.length; document.getElementById('singleDownloadModal').style.display = 'block'; setDownloadOption('all'); }
+        function closeSingleDownloadModal() { document.getElementById('singleDownloadModal').style.display = 'none'; }
+        function setDownloadOption(option) { currentDownloadOption = option; const allBtn = document.getElementById('optionAll'); const specifyBtn = document.getElementById('optionSpecify'); const specifyArea = document.getElementById('specifyInputArea'); if (option === 'all') { allBtn.classList.add('active'); specifyBtn.classList.remove('active'); specifyArea.style.display = 'none'; } else { allBtn.classList.remove('active'); specifyBtn.classList.add('active'); specifyArea.style.display = 'block'; } }
+        
+        function parseNumbersInput(input, maxNum) { if (!input.trim()) return []; const result = new Set(); const parts = input.split(','); for (let part of parts) { part = part.trim(); if (part.includes('-')) { const range = part.split('-'); if (range.length === 2) { let start = parseInt(range[0]); let end = parseInt(range[1]); if (!isNaN(start) && !isNaN(end) && start <= end) { for (let i = start; i <= end; i++) { if (i >= 1 && i <= maxNum) result.add(i); } } } } else { let num = parseInt(part); if (!isNaN(num) && num >= 1 && num <= maxNum) result.add(num); } } return Array.from(result).sort((a, b) => a - b); }
+        
+        async function confirmSingleDownload() {
+            closeSingleDownloadModal();
+            if (b.length === 0) { sh('❌ 没有图片'); return; }
+            let indicesToDownload = [];
+            if (currentDownloadOption === 'all') { for (let i = 0; i < b.length; i++) indicesToDownload.push(i); }
+            else {
+                const inputVal = document.getElementById('specifyNumbers').value;
+                const numbers = parseNumbersInput(inputVal, b.length);
+                if (numbers.length === 0) { sh('❌ 请输入有效的序号（如：1,3,5-8）'); return; }
+                indicesToDownload = numbers.map(n => n - 1);
+            }
+            let useZip = confirm(`共 ${indicesToDownload.length} 张图片，是否打包成ZIP文件？\n\n点击"确定"打包成ZIP\n点击"取消"一张张下载`);
+            await processSingleDownload(indicesToDownload, useZip);
+        }
+        
+        async function processSingleDownload(indices, useZip) {
+            let qualityType = document.getElementById('exportQuality').value;
+            let format = 'image/jpeg'; let quality = 0.96; let ext = '.jpg';
+            if (qualityType === 'png') { format = 'image/png'; quality = 1.0; ext = '.png'; } else if (qualityType === 'jpg_mid') quality = 0.8;
+            let zip = null; if (useZip) zip = new JSZip();
+            bm(true, `正在处理 ${indices.length} 张图片...`);
+            try {
+                for (let idxIdx = 0; idxIdx < indices.length; idxIdx++) {
+                    let originalIdx = indices[idxIdx];
+                    bm(true, `正在处理第 ${idxIdx+1}/${indices.length} 张...`);
+                    let renderContainer = document.getElementById('batchRenderContainer');
+                    renderContainer.style.width = '400px'; renderContainer.style.height = 'auto'; renderContainer.innerHTML = '';
+                    let tempDiv = document.createElement('div');
+                    tempDiv.className = 'grid-item relative';
+                    tempDiv.style.aspectRatio = document.getElementById('aspectRatio').value;
+                    tempDiv.style.width = '400px'; tempDiv.style.height = 'auto'; tempDiv.style.position = 'relative'; tempDiv.style.overflow = 'hidden';
+                    let img = document.createElement('img');
+                    img.src = b[originalIdx];
+                    img.className = `w-full h-full pointer-events-none ${document.getElementById('fitMode').value === 'contain' ? 'object-contain' : 'object-cover'}`;
+                    img.style.width = '100%'; img.style.height = '100%';
+                    tempDiv.appendChild(img);
+                    if (h && g) {
+                        let wm = document.createElement('img'); wm.src = g; wm.className = 'absolute pointer-events-none';
+                        wm.style.left = wmX + '%'; wm.style.top = wmY + '%'; wm.style.transform = 'translate(-50%, -50%)';
+                        wm.style.width = `${parseInt(document.getElementById('watermarkSize').value) / 100 * 100}%`; wm.style.height = 'auto';
+                        wm.style.maxWidth = '100%'; wm.style.maxHeight = '100%'; wm.style.objectFit = 'contain'; wm.style.opacity = '0.7'; wm.style.zIndex = '25';
+                        tempDiv.appendChild(wm);
+                    }
+                    if (document.getElementById('showNumbers').checked) {
+                        let num = document.createElement('div');
+                        num.className = 'number-badge absolute font-bold z-30 leading-none drop-shadow-md';
+                        num.style.left = d + '%'; num.style.top = e + '%'; num.style.transform = 'translate(-50%, -50%)'; num.style.position = 'absolute';
+                        num.innerText = originalIdx + startNumber;
+                        num.style.color = document.getElementById('numColor').value;
+                        num.style.fontFamily = document.getElementById('numFont').value;
+                        num.style.fontSize = document.getElementById('numSize').value + 'px';
+                        num.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+                        tempDiv.appendChild(num);
+                    }
+                    renderContainer.appendChild(tempDiv);
+                    await new Promise(r => setTimeout(r, 200));
+                    let canvas = await html2canvas(renderContainer, { scale: 3, useCORS: true, backgroundColor: '#ffffff', allowTaint: true, logging: false });
+                    await new Promise(resolve => {
+                        canvas.toBlob((blob) => {
+                            let fileName = `single_${originalIdx+startNumber}_${Date.now()}${ext}`;
+                            if (useZip && zip) zip.file(fileName, blob);
+                            else { let url = URL.createObjectURL(blob); let link = document.createElement('a'); link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); if (isMobileDevice) setTimeout(() => window.open(url, '_blank'), 300); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+                            resolve();
+                        }, format, quality);
+                    });
+                    renderContainer.innerHTML = '';
+                }
+                if (useZip && zip) { bm(true, '正在生成ZIP文件...'); const content = await zip.generateAsync({ type: "blob" }); let zipUrl = URL.createObjectURL(content); let zipLink = document.createElement('a'); zipLink.href = zipUrl; zipLink.download = `selected_singles_${Date.now()}.zip`; document.body.appendChild(zipLink); zipLink.click(); document.body.removeChild(zipLink); setTimeout(() => URL.revokeObjectURL(zipUrl), 1000); }
+                sh(`✅ 已处理 ${indices.length} 张图片`);
+            } catch (err) { console.error(err); sh('❌ 处理失败'); } finally { bm(false); document.getElementById('batchRenderContainer').innerHTML = ''; }
+        }
+
+        // 保存所有状态
+        function saveAllState() {
+            try {
+                const state = {
+                    images: b, cols: a, numPosX: d, numPosY: e,
+                    watermarkX: wmX, watermarkY: wmY, watermarkData: g, watermarkEnabled: h,
+                    aspectRatio: document.getElementById('aspectRatio').value,
+                    fitMode: document.getElementById('fitMode').value,
+                    showNumbers: document.getElementById('showNumbers').checked,
+                    numColor: document.getElementById('numColor').value,
+                    numFont: document.getElementById('numFont').value,
+                    numSize: document.getElementById('numSize').value,
+                    watermarkSize: document.getElementById('watermarkSize').value,
+                    exportQuality: document.getElementById('exportQuality').value,
+                    colSelect: a,
+                    startNumber: parseInt(document.getElementById('startNumber').value) || 1
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) { console.error('保存失败', e); }
+        }
+
+        function loadAllState() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (!saved) return false;
+                const state = JSON.parse(saved);
+                if (state.images) b = state.images;
+                if (state.cols) { a = state.cols; document.getElementById('colSelect').value = a; }
+                if (state.numPosX) d = state.numPosX;
+                if (state.numPosY) e = state.numPosY;
+                if (state.watermarkX) wmX = state.watermarkX;
+                if (state.watermarkY) wmY = state.watermarkY;
+                if (state.watermarkData) g = state.watermarkData;
+                if (state.watermarkEnabled !== undefined) h = state.watermarkEnabled;
+                if (state.startNumber) { startNumber = state.startNumber; document.getElementById('startNumber').value = startNumber; }
+                if (state.aspectRatio) document.getElementById('aspectRatio').value = state.aspectRatio;
+                if (state.fitMode) document.getElementById('fitMode').value = state.fitMode;
+                if (state.showNumbers !== undefined) document.getElementById('showNumbers').checked = state.showNumbers;
+                if (state.numColor) document.getElementById('numColor').value = state.numColor;
+                if (state.numFont) document.getElementById('numFont').value = state.numFont;
+                if (state.numSize) document.getElementById('numSize').value = state.numSize;
+                if (state.watermarkSize) document.getElementById('watermarkSize').value = state.watermarkSize;
+                if (state.exportQuality) document.getElementById('exportQuality').value = state.exportQuality;
+                return true;
+            } catch (e) { return false; }
+        }
+
+        function saveAndRender() { 
+            startNumber = parseInt(document.getElementById('startNumber').value) || 1;
+            X(); 
+            saveAllState(); 
+        }
+        function updateCountAndSave() { document.getElementById('imageCountDisplay').innerText = b.length + ' 张'; saveAllState(); }
+        function X() { K(document.getElementById('gridContainer'), b, a, 0, 1); }
+        function showCenterHint(message) { let hint = document.createElement('div'); hint.className = 'center-hint'; hint.textContent = message; document.body.appendChild(hint); setTimeout(() => hint.remove(), 1500); }
+        function sh(m) { let n = document.createElement('div'); n.className = 'save-hint'; n.textContent = m; document.body.appendChild(n); setTimeout(() => n.remove(), 2800); }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedTheme();
+            loadAllState();
+            if (!document.getElementById('aspectRatio').value) document.getElementById('aspectRatio').value = '9/16';
+            X();
+            updateCountAndSave();
+            if (isMobileDevice) document.getElementById('saveBtnText').textContent = '长按保存到相册';
+            let o = document.body;
+            o.addEventListener('dragover', (p) => { p.preventDefault(); p.stopPropagation(); o.classList.add('drag-over'); document.getElementById('mainContent').classList.add('dropzone-highlight'); });
+            o.addEventListener('dragenter', (p) => { p.preventDefault(); p.stopPropagation(); o.classList.add('drag-over'); document.getElementById('mainContent').classList.add('dropzone-highlight'); });
+            o.addEventListener('dragleave', (p) => { p.preventDefault(); p.stopPropagation(); if (!p.relatedTarget || !o.contains(p.relatedTarget)) { o.classList.remove('drag-over'); document.getElementById('mainContent').classList.remove('dropzone-highlight'); }});
+            o.addEventListener('drop', (p) => { p.preventDefault(); p.stopPropagation(); o.classList.remove('drag-over'); document.getElementById('mainContent').classList.remove('dropzone-highlight'); let q = p.dataTransfer.files; if (q.length > 0) hf(q); });
+            window.addEventListener('dragover', (p) => p.preventDefault());
+            window.addEventListener('drop', (p) => p.preventDefault());
+            document.getElementById('watermarkEnable').addEventListener('change', (p) => { h = p.target.checked; saveAndRender(); });
+            document.getElementById('startNumber').addEventListener('change', () => { saveAndRender(); });
+        });
+
+        function handleMobileSave() { if (!f) return; if (isMobileDevice) { let bu = document.getElementById('exportQuality').value; let bv = bu === 'png' ? '.png' : '.jpg'; let bw = `shenyu_${Date.now()}${bv}`; let bx = URL.createObjectURL(f); let newWindow = window.open(bx, '_blank'); if (newWindow) { sh('📱 图片已打开，请长按图片并选择"保存到相册"'); } else { let by = document.createElement('a'); by.href = bx; by.download = bw; document.body.appendChild(by); by.click(); document.body.removeChild(by); sh('📱 如果未弹出图片，请点击浏览器下载项，然后手动保存到相册'); } setTimeout(() => URL.revokeObjectURL(bx), 30000); cp(); } else { sp(); } }
+        function scFromSelect() { let select = document.getElementById('colSelect'); a = parseInt(select.value); saveAndRender(); }
+        function hf(u) { if (!u || u.length === 0) return; let v = Array.from(u).filter(w => w.type.startsWith('image/')); if (v.length === 0) { sh('❌ 请选择图片文件'); return; } let x = 0; v.forEach(y => { let z = new FileReader(); z.onload = (A) => { b.push(A.target.result); x++; if (x === v.length) { saveAndRender(); document.getElementById('mainInput').value = ''; updateCountAndSave(); showCenterHint(`✅ 已添加 ${v.length} 张图片`); } }; z.readAsDataURL(y); }); }
+        function cc() { if (b.length === 0) return; if (confirm('确定清空？')) { b = []; saveAndRender(); updateCountAndSave(); } }
+        function B(C) { c = C; document.getElementById('replaceInput').click(); }
+        function hrf(D) { if (!D.length || c === -1) return; let E = new FileReader(); E.onload = (F) => { b[c] = F.target.result; saveAndRender(); c = -1; updateCountAndSave(); showCenterHint('✅ 已替换'); }; E.readAsDataURL(D[0]); document.getElementById('replaceInput').value = ''; }
+        function hwf(G) { if (!G || G.length === 0) return; let H = G[0]; if (!H.type.startsWith('image/')) { sh('❌ 请上传图片作为水印'); return; } let I = new FileReader(); I.onload = (J) => { g = J.target.result; document.getElementById('watermarkEnable').checked = true; h = true; saveAndRender(); showCenterHint('✨ 水印已添加'); }; I.readAsDataURL(H); document.getElementById('watermarkInput').value = ''; }
+        
+        // 核心渲染函数
+        function K(L, M, N, O, P) {
+            let Q = document.getElementById('fitMode').value, R = document.getElementById('aspectRatio').value, S = document.getElementById('showNumbers').checked, T = document.getElementById('numColor').value, U = document.getElementById('numFont').value, V = parseInt(document.getElementById('numSize').value) || 24, W = h && g, WW = parseInt(document.getElementById('watermarkSize').value) / 100 || 0.3, Y = M.length, Z = Math.ceil(Y / N) || 1;
+            L.style.display = 'grid'; L.style.gridTemplateColumns = `repeat(${N}, 1fr)`; L.innerHTML = ''; let _ = Z * N;
+            for (let $ = 0; $ < _; $++) {
+                let ab = document.createElement('div'); ab.className = 'grid-item flex items-center justify-center cursor-pointer relative'; let ac = L.id === 'gridContainer';
+                if (ac) { ab.dataset.index = $; ab.setAttribute('draggable', 'true'); ab.ondragstart = ad; ab.ondragover = ae; ab.ondrop = af; ab.ondragend = ag; ab.onclick = (ah) => { if (ah.target.closest('.delete-btn')) return; if ($ < M.length && M[$]) B($); else document.getElementById('mainInput').click(); }; } else ab.classList.add('capturing');
+                ab.style.aspectRatio = R;
+                if ($ < M.length && M[$]) {
+                    let ai = document.createElement('div'); ai.className = 'relative w-full h-full'; let aj = document.createElement('img'); aj.src = M[$]; aj.className = `w-full h-full pointer-events-none ${Q === 'contain' ? 'object-contain' : 'object-cover'}`; ai.appendChild(aj);
+                    if (W) { let ak = document.createElement('img'); ak.src = g; ak.className = 'watermark-badge absolute pointer-events-none'; ak.style.left = wmX + '%'; ak.style.top = wmY + '%'; ak.style.transform = 'translate(-50%, -50%)'; ak.style.width = `${WW * 100}%`; ak.style.height = 'auto'; ak.style.maxWidth = '100%'; ak.style.maxHeight = '100%'; ak.style.objectFit = 'contain'; ak.style.opacity = '0.7'; ak.style.zIndex = '25'; ak.style.cursor = 'move'; if (ac) { ak.style.pointerEvents = 'auto'; ak.onmousedown = (e) => startWmDrag(e, ak); ak.ontouchstart = (e) => startWmDrag(e, ak); } else ak.style.pointerEvents = 'none'; ai.appendChild(ak); }
+                    ab.appendChild(ai);
+                    if (S) {
+                        let al = document.createElement('div'); al.className = 'number-badge absolute font-bold z-30 leading-none drop-shadow-md cursor-move select-none';
+                        al.style.left = d + '%'; al.style.top = e + '%'; al.style.transform = 'translate(-50%, -50%)';
+                        let displayNumber = startNumber + $;
+                        al.innerText = displayNumber;
+                        al.style.color = T; al.style.fontFamily = U; al.style.fontSize = V * P + 'px'; al.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+                        if (ac) { al.style.pointerEvents = 'auto'; al.onmousedown = (am) => an(am, al); al.ontouchstart = (am) => an(am, al); } else al.style.pointerEvents = 'none';
+                        ab.appendChild(al);
+                    }
+                    if (ac) { let ao = document.createElement('div'); ao.className = 'overlay-hint absolute inset-0 flex items-center justify-center pointer-events-none'; ao.innerHTML = '<span class="bg-black/40 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">点击替换</span>'; ab.appendChild(ao); let ap = document.createElement('button'); ap.innerHTML = '×'; ap.className = 'delete-btn absolute top-0 right-0 w-6 h-6 flex items-center justify-center z-20 font-bold'; ap.style.backgroundColor = 'var(--accent-light)'; ap.style.color = 'white'; ap.onclick = (aq) => { aq.stopPropagation(); b.splice($, 1); saveAndRender(); updateCountAndSave(); }; ab.appendChild(ap); }
+                } else { if (ac) { ab.classList.add('empty'); ab.innerHTML = '<span class="empty-placeholder text-3xl select-none pointer-events-none">+</span>'; } else ab.style.backgroundColor = '#fff2f5'; }
+                L.appendChild(ab);
+            }
+        }
+
+        // 水印拖动、序号拖动等函数
+        let isDraggingWm = false;
+        function startWmDrag(e, elem) { e.stopPropagation(); e.preventDefault(); isDraggingWm = true; let container = elem.parentElement.parentElement; let rect = container.getBoundingClientRect(); function onMove(me) { if (!isDraggingWm) return; let clientX = me.touches ? me.touches[0].clientX : me.clientX; let clientY = me.touches ? me.touches[0].clientY : me.clientY; let x = clientX - rect.left; let y = clientY - rect.top; let percentX = (x / rect.width) * 100; let percentY = (y / rect.height) * 100; percentX = Math.max(0, Math.min(100, percentX)); percentY = Math.max(0, Math.min(100, percentY)); wmX = percentX; wmY = percentY; document.querySelectorAll('.watermark-badge').forEach(w => { w.style.left = wmX + '%'; w.style.top = wmY + '%'; }); } function onUp() { isDraggingWm = false; saveAllState(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp); } document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onUp); }
+        let ar = null;
+        function ad(as) { if (as.target.classList.contains('number-badge') || as.target.classList.contains('watermark-badge')) return; this.classList.add('dragging'); ar = parseInt(this.dataset.index); as.dataTransfer.effectAllowed = 'move'; }
+        function ae(at) { at.preventDefault(); at.dataTransfer.dropEffect = 'move'; return false; }
+        function af(au) { au.stopPropagation(); let av = parseInt(this.dataset.index); if (ar !== null && ar !== av) { while (b.length <= Math.max(ar, av)) b.push(null); [b[ar], b[av]] = [b[av], b[ar]]; saveAndRender(); updateCountAndSave(); } return false; }
+        function ag() { this.classList.remove('dragging'); }
+        let aw = false;
+        function an(ax, ay) { ax.stopPropagation(); ax.preventDefault(); aw = true; let az = ay.parentElement, ba = az.getBoundingClientRect(); function bb(bc) { if (!aw) return; let bd = bc.touches ? bc.touches[0].clientX : bc.clientX, be = bc.touches ? bc.touches[0].clientY : bc.clientY, bf = bd - ba.left, bg = be - ba.top, bh = (bf / ba.width) * 100, bi = (bg / ba.height) * 100; bh = Math.max(0, Math.min(100, bh)); bi = Math.max(0, Math.min(100, bi)); d = bh; e = bi; document.querySelectorAll('.number-badge').forEach(bj => { bj.style.left = d + '%'; bj.style.top = e + '%'; }); } function bk() { aw = false; saveAllState(); document.removeEventListener('mousemove', bb); document.removeEventListener('mouseup', bk); document.removeEventListener('touchmove', bb); document.removeEventListener('touchend', bk); } document.addEventListener('mousemove', bb); document.addEventListener('mouseup', bk); document.addEventListener('touchmove', bb, { passive: false }); document.addEventListener('touchend', bk); }
+        
+        async function downloadFullImageDirect() { if (b.length === 0) { sh('❌ 请先添加图片'); return; } let bl = document.getElementById('captureArea'); bm(true, '生成长图...'); bl.classList.add('capturing'); K(document.getElementById('gridContainer'), b, a, 0, 1); try { await new Promise(bn => setTimeout(bn, 200)); let bo = await html2canvas(bl, { scale: 3, useCORS: true, backgroundColor: '#ffffff', allowTaint: true, logging: false }); let bp = document.getElementById('exportQuality').value, bq = 'image/jpeg', br = 0.96, ext = '.jpg'; if (bp === 'png') { bq = 'image/png'; br = 1.0; ext = '.png'; } else if (bp === 'jpg_mid') br = 0.8; bo.toBlob((bs) => { let bw = `long_${Date.now()}${ext}`, bx = URL.createObjectURL(bs), by = document.createElement('a'); by.href = bx; by.download = bw; document.body.appendChild(by); by.click(); document.body.removeChild(by); if (isMobileDevice) { sh('📱 已开始下载，请在浏览器下载列表中查看'); setTimeout(() => window.open(bx, '_blank'), 500); } else { sh('✅ 长图已下载'); } bm(false); }, bq, br); } catch (bt) { console.error(bt); sh('❌ 生成失败'); bm(false); } finally { bl.classList.remove('capturing'); K(document.getElementById('gridContainer'), b, a, 0, 1); } }
+        
+        async function start3x3Split() { if (b.length === 0) { sh('❌ 没有图片'); return; } let batchCols = 3, batchRows = 3, batchSize = 9, totalBatches = Math.ceil(b.length / batchSize); let renderContainer = document.getElementById('batchRenderContainer'), currentWidth = document.getElementById('canvasWrapper').offsetWidth; renderContainer.style.width = currentWidth + 'px'; let fontScaleRatio = a / batchCols; bm(true, `分割 ${totalBatches} 张...`); let qualityType = document.getElementById('exportQuality').value, format = 'image/jpeg', quality = 0.96, ext = '.jpg'; if (qualityType === 'png') { format = 'image/png'; quality = 1.0; ext = '.png'; } else if (qualityType === 'jpg_mid') quality = 0.8; try { for (let i = 0; i < totalBatches; i++) { bm(true, `第 ${i + 1}/${totalBatches} 张...`); let startIdx = i * batchSize, endIdx = Math.min(startIdx + batchSize, b.length), batchImages = b.slice(startIdx, endIdx); renderContainer.innerHTML = ''; K(renderContainer, batchImages, batchCols, startIdx, fontScaleRatio); await new Promise(r => setTimeout(r, 200)); let canvas = await html2canvas(renderContainer, { scale: 3, useCORS: true, backgroundColor: '#ffffff', allowTaint: true, logging: false }); await new Promise(resolve => { canvas.toBlob((blob) => { let fileName = `split_3x3_${i + 1}${ext}`, url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); if (isMobileDevice) setTimeout(() => window.open(url, '_blank'), 300); resolve(); }, format, quality); }); await new Promise(r => setTimeout(r, 500)); } sh(`✅ 3x3分割完成，共${totalBatches}张`); } catch (err) { console.error(err); sh('❌ 分割出错'); } finally { bm(false); renderContainer.innerHTML = ''; } }
+        
+        function sp() { if (!f) return; let bu = document.getElementById('exportQuality').value, bv = bu === 'png' ? '.png' : '.jpg', bw = `shenyu_${Date.now()}${bv}`, bx = URL.createObjectURL(f), by = document.createElement('a'); by.href = bx; by.download = bw; document.body.appendChild(by); by.click(); document.body.removeChild(by); if (isMobileDevice) { setTimeout(() => { window.open(bx, '_blank'); sh('📱 长按保存'); }, 500); } else { sh('✅ 下载开始'); } cp(); }
+        function cp() { document.getElementById('previewModal').classList.add('hidden'); if (document.getElementById('previewImage').src) URL.revokeObjectURL(document.getElementById('previewImage').src); }
+        function bm(bz, ca) { let cb = document.getElementById('loadingToast'), cc = document.getElementById('loadingText'); if (bz) { cb.classList.remove('hidden'); cc.innerText = ca; } else cb.classList.add('hidden'); }
+        function showUpdateLog() { document.getElementById('logModal').style.display = 'block'; }
+        function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
+        
+        window.downloadFullImageDirect = downloadFullImageDirect;
+        window.start3x3Split = start3x3Split;
+        window.showSingleDownloadModal = showSingleDownloadModal;
+        window.closeSingleDownloadModal = closeSingleDownloadModal;
+        window.setDownloadOption = setDownloadOption;
+        window.confirmSingleDownload = confirmSingleDownload;
+        window.showUpdateLog = showUpdateLog;
+        window.closeLogModal = closeLogModal;
+        window.showThemeModal = showThemeModal;
+        window.closeThemeModal = closeThemeModal;
+        window.applyTheme = applyTheme;
+        window.handleMobileSave = handleMobileSave;
+        window.cc = cc; window.scFromSelect = scFromSelect; window.hf = hf; window.sp = sp; window.cp = cp; window.B = B; window.hrf = hrf; window.hwf = hwf; window.X = X; window.an = an; window.saveAndRender = saveAndRender;
+    </script>
+</body>
+</html>            outline: 1px solid var(--accent-border);
             aspect-ratio: 9/16;
         }
         .grid-item img {
@@ -363,13 +1110,14 @@
         <!-- 更新日志模态框 -->
         <div id="logModal" class="modal-overlay" onclick="closeLogModal()">
             <div class="modal-content" onclick="event.stopPropagation()">
-                <div class="modal-header">✨更新日志 v1.9.5</div>
+                <div class="modal-header">✨更新日志 v1.9.6</div>
                 <div class="modal-body">
                     <p><strong>如何找到作者反馈</strong></p>
                     <ul>
-                        <li>声明：此工具本人制作，本人拥有绝对的话语权。</li>
+                        <li>声明：此工具由本人原创制作。</li>
                         <li>红薯：Skym深鱼; V:Fe-bAq-u</li>
-                        <li>⚠️此工具只有本人授权使用，通过他人得到链接均属二传或者二卖，被我发现我会取消链接，你们会失去这个好东西哦！且行且珍惜~</li>
+                        <li>⚠️此工具只有本人授权使用，通过他人得到链接均属二传或者二卖，被我发现我会取消链接，你们会失去这个好东西！且行且珍惜~</li>
+                        <li>手机电脑ios都可以用，只要有浏览器就行。</li>
                     </ul>
                     <p><strong>暂时无解问题</strong></p>
                     <ul>
@@ -394,7 +1142,7 @@
                         <li><strong>输出质量</strong>：原图PNG / 高清JPG / 压缩JPG（在顶部工具栏选择）</li>
                     </ul>
 
-                    <p><strong>【图片拖拽】（bug，暂时取消）</strong></p>
+                    <p><strong>【图片拖拽】（bug，有些浏览器不支持）</strong></p>
                     <ul>
                         <li>拖拽图片可互换位置，拖拽时显示浮动预览图</li>
                         <li>拖到空白区域可取消操作</li>
@@ -420,7 +1168,7 @@
 
                     <p><strong>【画布设置】</strong></p>
                     <ul>
-                        <li>行选择：1行~7行</li>
+                        <li>行选择：1行~8行（一行几张图）</li>
                         <li>比例：1:1 / 3:4 / 9:16 / 4:3 / 16:9</li>
                         <li>模式：裁剪/完整</li>
                     </ul>
