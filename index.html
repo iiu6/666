@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skym深鱼拼图 · v1.9.8</title>
+    <title>Skym深鱼拼图 · v1.9.9</title>
     <!-- 字体库 -->
     <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;900&family=Pacifico&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -519,7 +519,7 @@
     <header class="pink-panel px-3 py-2 flex justify-between items-center shrink-0 z-50 shadow-sm" style="background:var(--panel-bg);">
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 70px;">
     <div class="floating-title" style="color:var(--accent-color); font-size:0.7rem; font-family:'Pacifico', cursive; font-weight:bold; text-align:center; line-height:1.3; white-space:nowrap;">Skym深鱼</div>
-    <div class="floating-title" style="color:var(--accent-color); font-size:0.6rem; font-family:'Pacifico', cursive; font-weight:bold; text-align:center; line-height:1.2; white-space:nowrap;">拼图v1.9.8</div>
+    <div class="floating-title" style="color:var(--accent-color); font-size:0.6rem; font-family:'Pacifico', cursive; font-weight:bold; text-align:center; line-height:1.2; white-space:nowrap;">拼图v1.9.9</div>
 </div>
         <div class="flex gap-1 items-center">
             <button onclick="cc()" class="text-xs font-bold px-2 py-1 rounded transition" style="color:var(--accent-color); background:color-mix(in srgb, var(--accent-border) 30%, transparent);">清空</button>
@@ -677,7 +677,7 @@
         <!-- 更新日志模态框 -->
         <div id="logModal" class="modal-overlay" onclick="closeLogModal()">
             <div class="modal-content" onclick="event.stopPropagation()">
-                <div class="modal-header">✨更新日志 v1.9.8</div>
+                <div class="modal-header">✨更新日志 v1.9.9</div>
                 <div class="modal-body">
                     <p><strong>如何找到作者本人反馈</strong></p>
                     <ul>
@@ -690,8 +690,8 @@
                         <li>序号不能贴近下方底部，需要预留一点空间，否则被遮挡。</li>
                     </ul>
 
-                    <p><strong>💜Skym深鱼拼图 v1.9.8 · 使用说明💜</strong></p>
-                    <p><strong>支持安卓、ios、pc</strong></p
+                    <p><strong>💜Skym深鱼拼图 v1.9.9 · 使用说明💜</strong></p>
+                    <p><strong>支持安卓、ios、pc</strong></p>
 
                     <p><strong>【基础操作】</strong></p>
                     <ul>
@@ -700,6 +700,7 @@
                         <li><strong>删除</strong>：每张图片右上角×可单独删除</li>
                         <li><strong>替换</strong>：点击已有图片可替换新图</li>
                         <li><strong>画质</strong>：点击「画质」按钮，滑动滑块调节画质清晰度，画质 50%~100%，100%为上传的原图分辨率</li>
+                        <li><strong>总览</strong>：点击「画质」按钮，快速预览全部图片、分割预览，可拖拽更换位置</li>
                     </ul>
 
                     <p><strong>【下载方式】</strong></p>
@@ -751,12 +752,16 @@
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <span class="split-info-tag" id="splitPreviewInfo">📊 分割预览: 等待计算</span>
         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <span style="font-size:0.65rem; color:var(--accent-text);">每行:</span>
+            <span style="font-size:0.65rem; color:var(--accent-text);">每行几张:</span>
+            <input type="number" id="previewCols" min="1" max="8" value="3" style="width:55px; border:1px solid var(--accent-shadow); border-radius:8px; padding:4px; font-size:0.7rem;">
+            <span style="font-size:0.65rem; color:var(--accent-text);">×</span>
             <input type="number" id="splitPreviewRows" min="1" max="10" value="3" style="width:55px; border:1px solid var(--accent-shadow); border-radius:8px; padding:4px; font-size:0.7rem;">
-            <span style="font-size:0.65rem; color:var(--accent-text);">预览第:</span>
-            <input type="number" id="splitPreviewPage" min="1" max="1" value="1" style="width:50px; border:1px solid var(--accent-shadow); border-radius:8px; padding:4px; font-size:0.7rem;">
-            <span style="font-size:0.65rem; color:var(--accent-text);">页</span>
-            <button class="batch-btn primary" style="padding:2px 8px;" onclick="refreshSplitPreview()">刷新预览</button>
+            <span style="font-size:0.65rem; color:var(--accent-text);">行</span>
+            <span style="font-size:0.65rem; color:var(--accent-text); margin-left:5px;">预览第:</span>
+            <button class="batch-btn" style="padding:2px 6px;" onclick="changePreviewPage(-1)">◀</button>
+            <input type="number" id="splitPreviewPage" min="1" max="1" value="1" style="width:50px; border:1px solid var(--accent-shadow); border-radius:8px; padding:4px; font-size:0.7rem; text-align:center;">
+            <button class="batch-btn" style="padding:2px 6px;" onclick="changePreviewPage(1)">▶</button>
+            <span style="font-size:0.65rem; color:var(--accent-text);" id="totalPagesDisplay">/ 1</span>
         </div>
     </div>
     <div class="split-preview-canvas-area">
@@ -1141,10 +1146,12 @@
         
         async function refreshSplitPreview() {
     if(b.length === 0) return;
+    
+    // 获取预览用的列数（每行几张）和行数（每页几行）
+    let previewCols = parseInt(document.getElementById('previewCols')?.value) || a;
     let rowsPerSplit = parseInt(document.getElementById('splitPreviewRows')?.value) || 3;
     let pageNum = parseInt(document.getElementById('splitPreviewPage')?.value) || 1;
-    let cols = a;
-    let perPage = rowsPerSplit * cols;
+    let perPage = previewCols * rowsPerSplit;
     let totalPages = Math.ceil(b.length / perPage);
     
     // 更新页码输入框的最大值
@@ -1156,11 +1163,12 @@
             pageInput.value = pageNum;
         }
     }
+    if(totalPages === 0) totalPages = 1;
     
     // 更新提示信息
     let previewSpan = document.getElementById('splitPreviewInfo');
     if(previewSpan) {
-        previewSpan.innerHTML = `📊 每页 ${rowsPerSplit}行 × ${cols}列 = ${perPage}张/页 → 共 ${totalPages} 页 (共${b.length}张) | 当前预览第 ${pageNum}/${totalPages} 页`;
+        previewSpan.innerHTML = `📊 每页 ${rowsPerSplit}行 × ${previewCols}列 = ${perPage}张/页 → 共 ${totalPages} 页 (共${b.length}张) | 当前预览第 ${pageNum}/${totalPages} 页`;
     }
     
     let loadingDiv = document.getElementById('splitPreviewLoading');
@@ -1174,22 +1182,22 @@
         
         let tempGrid = document.createElement('div');
         tempGrid.style.display = 'grid';
-        tempGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        tempGrid.style.gridTemplateColumns = `repeat(${previewCols}, 1fr)`;
         tempGrid.style.backgroundColor = '#fff';
         tempGrid.style.width = '300px';
         
-        let showNum = document.getElementById('showNumbers').checked;
-        let numColor = document.getElementById('numColor').value;
-        let numFont = document.getElementById('numFont').value;
-        let numSize = parseInt(document.getElementById('numSize').value);
+        let showNum = document.getElementById('showNumbers')?.checked ?? true;
+        let numColor = document.getElementById('numColor')?.value ?? '#ffffff';
+        let numFont = document.getElementById('numFont')?.value ?? 'sans-serif';
+        let numSize = parseInt(document.getElementById('numSize')?.value) || 24;
         let useWatermark = h && g;
-        let wmSizeRate = parseInt(document.getElementById('watermarkSize').value)/100;
-        let ratio = document.getElementById('aspectRatio').value;
+        let wmSizeRate = parseInt(document.getElementById('watermarkSize')?.value)/100 || 0.3;
+        let ratio = document.getElementById('aspectRatio')?.value ?? '9/16';
         
-        let actualRows = Math.ceil(pageImages.length / cols);
-        let baseNumber = startNumber + startIdx; // 当前页起始序号
+        let actualRows = Math.ceil(pageImages.length / previewCols);
+        let baseNumber = startNumber + startIdx;
         
-        for(let i=0; i<cols*actualRows; i++){
+        for(let i=0; i<previewCols*actualRows; i++){
             let cell = document.createElement('div');
             cell.style.aspectRatio = ratio;
             cell.style.position = 'relative';
@@ -1221,6 +1229,8 @@
                     numDiv.style.color = numColor;
                     numDiv.style.fontFamily = numFont;
                     numDiv.style.fontSize = (numSize * 0.6) + 'px';
+                    numDiv.style.fontWeight = 'bold';
+                    numDiv.style.textShadow = '1px 1px 1px rgba(0,0,0,0.3)';
                     numDiv.innerText = baseNumber + i;
                     cell.appendChild(numDiv);
                 }
@@ -1233,10 +1243,12 @@
         renderContainer.appendChild(tempGrid);
         await new Promise(r => setTimeout(r, 100));
         let previewCanvas = await html2canvas(renderContainer, { scale: 2, backgroundColor: '#ffffff' });
-        canvas.width = previewCanvas.width;
-        canvas.height = previewCanvas.height;
-        let ctx = canvas.getContext('2d');
-        ctx.drawImage(previewCanvas, 0, 0);
+        if(canvas) {
+            canvas.width = previewCanvas.width;
+            canvas.height = previewCanvas.height;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(previewCanvas, 0, 0);
+        }
     } catch(e) { console.error(e); }
     finally { if(loadingDiv) loadingDiv.style.display = 'none'; }
 }
@@ -1245,15 +1257,173 @@
 function updateSplitPreviewInfo() {
     let previewSpan = document.getElementById('splitPreviewInfo');
     if(!previewSpan || b.length === 0) return;
+    let previewCols = parseInt(document.getElementById('previewCols')?.value) || a;
     let rowsPerSplit = parseInt(document.getElementById('splitPreviewRows')?.value) || 3;
-    let cols = a;
-    let perPage = rowsPerSplit * cols;
+    let perPage = previewCols * rowsPerSplit;
     let total = b.length;
     let splitCount = Math.ceil(total / perPage);
     let currentPage = parseInt(document.getElementById('splitPreviewPage')?.value) || 1;
-    previewSpan.innerHTML = `📊 每页 ${rowsPerSplit}行 × ${cols}列 = ${perPage}张/页 → 共 ${splitCount} 页 (共${total}张) | 当前预览第 ${currentPage}/${splitCount} 页`;
+    previewSpan.innerHTML = `📊 每页 ${rowsPerSplit}行 × ${previewCols}列 = ${perPage}张/页 → 共 ${splitCount} 页 (共${total}张) | 当前预览第 ${currentPage}/${splitCount} 页`;
 }
         
+// 切换预览页码
+function changePreviewPage(delta) {
+    let pageInput = document.getElementById('splitPreviewPage');
+    if(!pageInput) return;
+    let newPage = parseInt(pageInput.value) + delta;
+    let maxPage = parseInt(pageInput.max) || 1;
+    if(newPage >= 1 && newPage <= maxPage) {
+        pageInput.value = newPage;
+        refreshSplitPreview();
+    }
+}
+
+// 修改后的 showQuickOverview 函数（让输入框修改后自动刷新）
+function showQuickOverview() {
+    if(b.length === 0){ sh('暂无图片'); return; }
+    refreshOverviewModal();
+    document.getElementById('overviewModal').style.display = 'block';
+    
+    // 绑定预览参数输入框的自动刷新事件
+    let previewCols = document.getElementById('previewCols');
+    let previewRows = document.getElementById('splitPreviewRows');
+    let previewPage = document.getElementById('splitPreviewPage');
+    
+    if(previewCols) {
+        previewCols.value = a;  // 默认使用当前列数
+        previewCols.oninput = () => { 
+            updateSplitPreviewInfo(); 
+            refreshSplitPreview(); 
+        };
+    }
+    if(previewRows) {
+        previewRows.value = document.getElementById('splitRows').value || 3;
+        previewRows.oninput = () => { 
+            updateSplitPreviewInfo(); 
+            refreshSplitPreview(); 
+        };
+    }
+    if(previewPage) {
+        previewPage.oninput = () => { refreshSplitPreview(); };
+    }
+    
+    refreshSplitPreview();
+}
+
+// 修改后的 refreshSplitPreview 函数（增加总页数显示）
+async function refreshSplitPreview() {
+    if(b.length === 0) return;
+    
+    let previewCols = parseInt(document.getElementById('previewCols')?.value) || a;
+    let rowsPerSplit = parseInt(document.getElementById('splitPreviewRows')?.value) || 3;
+    let pageNum = parseInt(document.getElementById('splitPreviewPage')?.value) || 1;
+    let perPage = previewCols * rowsPerSplit;
+    let totalPages = Math.ceil(b.length / perPage);
+    if(totalPages === 0) totalPages = 1;
+    
+    // 更新页码输入框
+    let pageInput = document.getElementById('splitPreviewPage');
+    let totalDisplay = document.getElementById('totalPagesDisplay');
+    if(pageInput) {
+        pageInput.max = totalPages;
+        if(pageNum > totalPages) {
+            pageNum = totalPages;
+            pageInput.value = pageNum;
+        }
+        if(pageNum < 1) {
+            pageNum = 1;
+            pageInput.value = 1;
+        }
+    }
+    if(totalDisplay) totalDisplay.innerText = `/ ${totalPages}`;
+    
+    // 更新提示信息
+    let previewSpan = document.getElementById('splitPreviewInfo');
+    if(previewSpan) {
+        previewSpan.innerHTML = `📊 每页 ${rowsPerSplit}行 × ${previewCols}列 = ${perPage}张/页 → 共 ${totalPages} 页 (共${b.length}张) | 当前第 ${pageNum}/${totalPages} 页`;
+    }
+    
+    let loadingDiv = document.getElementById('splitPreviewLoading');
+    let canvas = document.getElementById('splitPreviewCanvas');
+    if(loadingDiv) loadingDiv.style.display = 'block';
+    try {
+        let startIdx = (pageNum - 1) * perPage;
+        let endIdx = Math.min(startIdx + perPage, b.length);
+        let pageImages = b.slice(startIdx, endIdx);
+        
+        let tempGrid = document.createElement('div');
+        tempGrid.style.display = 'grid';
+        tempGrid.style.gridTemplateColumns = `repeat(${previewCols}, 1fr)`;
+        tempGrid.style.backgroundColor = '#fff';
+        tempGrid.style.width = '300px';
+        
+        let showNum = document.getElementById('showNumbers')?.checked ?? true;
+        let numColor = document.getElementById('numColor')?.value ?? '#ffffff';
+        let numFont = document.getElementById('numFont')?.value ?? 'sans-serif';
+        let numSize = parseInt(document.getElementById('numSize')?.value) || 24;
+        let useWatermark = h && g;
+        let wmSizeRate = parseInt(document.getElementById('watermarkSize')?.value)/100 || 0.3;
+        let ratio = document.getElementById('aspectRatio')?.value ?? '9/16';
+        
+        let actualRows = Math.ceil(pageImages.length / previewCols);
+        let baseNumber = startNumber + startIdx;
+        
+        for(let i=0; i<previewCols*actualRows; i++){
+            let cell = document.createElement('div');
+            cell.style.aspectRatio = ratio;
+            cell.style.position = 'relative';
+            cell.style.overflow = 'hidden';
+            cell.style.outline = '1px solid #ffd9e2';
+            cell.style.background = '#fff2f5';
+            if(i < pageImages.length && pageImages[i]){
+                let img = document.createElement('img');
+                img.src = pageImages[i];
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                cell.appendChild(img);
+                if(useWatermark){
+                    let wm = document.createElement('img');
+                    wm.src = g;
+                    wm.style.position = 'absolute';
+                    wm.style.left = wmX+'%'; wm.style.top = wmY+'%';
+                    wm.style.transform = 'translate(-50%,-50%)';
+                    wm.style.width = `${wmSizeRate*100}%`;
+                    wm.style.opacity = (wmOpacity / 100);
+                    cell.appendChild(wm);
+                }
+                if(showNum){
+                    let numDiv = document.createElement('div');
+                    numDiv.style.position = 'absolute';
+                    numDiv.style.left = d+'%'; numDiv.style.top = e+'%';
+                    numDiv.style.transform = 'translate(-50%,-50%)';
+                    numDiv.style.color = numColor;
+                    numDiv.style.fontFamily = numFont;
+                    numDiv.style.fontSize = (numSize * 0.6) + 'px';
+                    numDiv.style.fontWeight = 'bold';
+                    numDiv.style.textShadow = '1px 1px 1px rgba(0,0,0,0.3)';
+                    numDiv.innerText = baseNumber + i;
+                    cell.appendChild(numDiv);
+                }
+            }
+            tempGrid.appendChild(cell);
+        }
+        
+        let renderContainer = document.getElementById('batchRenderContainer');
+        renderContainer.innerHTML = '';
+        renderContainer.appendChild(tempGrid);
+        await new Promise(r => setTimeout(r, 100));
+        let previewCanvas = await html2canvas(renderContainer, { scale: 2, backgroundColor: '#ffffff' });
+        if(canvas) {
+            canvas.width = previewCanvas.width;
+            canvas.height = previewCanvas.height;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(previewCanvas, 0, 0);
+        }
+    } catch(e) { console.error(e); }
+    finally { if(loadingDiv) loadingDiv.style.display = 'none'; }
+}
+
         function moveSelectedToTop() { if(selectedIndices.size===0){sh('请先点击选中图片');return;} let sorted=Array.from(selectedIndices).sort((x,y)=>x-y); let newB=[...b]; let removed=[]; for(let i=sorted.length-1;i>=0;i--) removed.unshift(newB.splice(sorted[i],1)[0]); newB.unshift(...removed); b=newB; selectedIndices.clear(); refreshOverviewModal(); X(); updateCountAndSave(); refreshSplitPreview(); showCenterHint('已置顶'); }
         function moveSelectedToBottom() { if(selectedIndices.size===0){sh('请先选中图片');return;} let sorted=Array.from(selectedIndices).sort((x,y)=>x-y); let newB=[...b]; let removed=[]; for(let i=sorted.length-1;i>=0;i--) removed.unshift(newB.splice(sorted[i],1)[0]); newB.push(...removed); b=newB; selectedIndices.clear(); refreshOverviewModal(); X(); updateCountAndSave(); refreshSplitPreview(); showCenterHint('已置底'); }
         function moveSelectedUp() { if(selectedIndices.size!==1){sh('请只选中一张图片');return;} let idx=Array.from(selectedIndices)[0]; if(idx===0){sh('已在顶部');return;} [b[idx-1],b[idx]]=[b[idx],b[idx-1]]; selectedIndices.clear(); selectedIndices.add(idx-1); refreshOverviewModal(); X(); updateCountAndSave(); refreshSplitPreview(); showCenterHint('上移一位'); }
@@ -1299,7 +1469,7 @@ function updateSplitPreviewInfo() {
         function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
         
         window.downloadFullImageDirect = downloadFullImageDirect; window.showSplitModal = showSplitModal; window.closeSplitModal = closeSplitModal; window.setSplitOrder = setSplitOrder; window.confirmSplitSave = confirmSplitSave; window.showSingleDownloadModal = showSingleDownloadModal; window.closeSingleDownloadModal = closeSingleDownloadModal; window.setDownloadOption = setDownloadOption; window.confirmSingleDownload = confirmSingleDownload; window.showUpdateLog = showUpdateLog; window.closeLogModal = closeLogModal; window.showThemeModal = showThemeModal; window.closeThemeModal = closeThemeModal; window.applyTheme = applyTheme; window.handleMobileSave = handleMobileSave; window.cc = cc; window.scFromSelect = scFromSelect; window.hf = hf; window.sp = sp; window.cp = cp; window.B = B; window.hrf = hrf; window.hwf = hwf; window.X = X; window.an = an; window.saveAndRender = saveAndRender;
-        window.showQuickOverview = showQuickOverview; window.closeOverview = closeOverview; window.moveSelectedToTop = moveSelectedToTop; window.moveSelectedToBottom = moveSelectedToBottom; window.moveSelectedUp = moveSelectedUp; window.moveSelectedDown = moveSelectedDown; window.deleteSelected = deleteSelected; window.refreshSplitPreview = refreshSplitPreview;
+        window.showQuickOverview = showQuickOverview; window.closeOverview = closeOverview; window.moveSelectedToTop = moveSelectedToTop; window.moveSelectedToBottom = moveSelectedToBottom; window.moveSelectedUp = moveSelectedUp; window.moveSelectedDown = moveSelectedDown; window.deleteSelected = deleteSelected; window.refreshSplitPreview = refreshSplitPreview;window.changePreviewPage = changePreviewPage;
         
         function forceSaveAll() { try { const state = { images: b, cols: a, numPosX: d, numPosY: e, watermarkX: wmX, watermarkY: wmY, watermarkData: g, watermarkEnabled: h, watermarkOpacity: wmOpacity, aspectRatio: document.getElementById('aspectRatio').value, fitMode: document.getElementById('fitMode').value, showNumbers: document.getElementById('showNumbers').checked, numColor: document.getElementById('numColor').value, numFont: document.getElementById('numFont').value, numSize: document.getElementById('numSize').value, watermarkSize: document.getElementById('watermarkSize').value, startNumber: parseInt(document.getElementById('startNumber').value) || 1, compressQuality: compressQuality }; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('已保存', state.images.length + '张图片'); return true; } catch(e) { console.error('保存失败', e); return false; } }
         window.addEventListener('beforeunload', function() { forceSaveAll(); });
