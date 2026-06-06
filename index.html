@@ -1452,7 +1452,31 @@ async function refreshSplitPreview() {
         
         function handleMobileSave() { if (!f) return; if (isMobileDevice) { let bu = getExportQualityType(); let bv = bu === 'png' ? '.png' : '.jpg'; let bw = `shenyu_${Date.now()}${bv}`; let bx = URL.createObjectURL(f); let newWindow = window.open(bx, '_blank'); if (newWindow) { sh('📱 图片已打开，请长按图片并选择"保存到相册"'); } else { let by = document.createElement('a'); by.href = bx; by.download = bw; document.body.appendChild(by); by.click(); document.body.removeChild(by); sh('📱 如果未弹出图片，请点击浏览器下载项，然后手动保存到相册'); } setTimeout(() => URL.revokeObjectURL(bx), 30000); cp(); } else { sp(); } }
         function scFromSelect() { let select = document.getElementById('colSelect'); a = parseInt(select.value); saveAndRender(); }
-        function hf(u) { if (!u || u.length === 0) return; let v = Array.from(u).filter(w => w.type.startsWith('image/')); if (v.length === 0) { sh('❌ 请选择图片文件'); return; } let x = 0; v.forEach(y => { let z = new FileReader(); z.onload = (A) => { b.push(A.target.result); x++; if (x === v.length) { saveAndRender(); document.getElementById('mainInput').value = ''; updateCountAndSave(); showCenterHint(`✅ 已添加 ${v.length} 张图片`); } }; z.readAsDataURL(y); }); }
+        async function hf(u) { 
+    if (!u || u.length === 0) return; 
+    let files = Array.from(u).filter(w => w.type.startsWith('image/')); 
+    if (files.length === 0) { sh('❌ 请选择图片文件'); return; } 
+    
+    bm(true, `读取 ${files.length} 张图片...`);
+    
+    // 按顺序读取，保持用户选择的顺序
+    for (let i = 0; i < files.length; i++) {
+        let file = files[i];
+        let dataUrl = await new Promise((resolve) => {
+            let reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        b.push(dataUrl);
+        bm(true, `读取中 ${i+1}/${files.length}`);
+    }
+    
+    bm(false);
+    saveAndRender();
+    document.getElementById('mainInput').value = '';
+    updateCountAndSave();
+    centerHint(`✅ 已添加 ${files.length} 张图片`);
+}
         function cc() { if (b.length === 0) return; if (confirm('确定清空？')) { b = []; saveAndRender(); updateCountAndSave(); } }
         function B(C) { c = C; document.getElementById('replaceInput').click(); }
         function hrf(D) { if (!D.length || c === -1) return; let E = new FileReader(); E.onload = (F) => { b[c] = F.target.result; saveAndRender(); c = -1; updateCountAndSave(); showCenterHint('✅ 已替换'); }; E.readAsDataURL(D[0]); document.getElementById('replaceInput').value = ''; }
